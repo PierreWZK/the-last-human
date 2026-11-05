@@ -248,3 +248,16 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Neural grid: 3 × 3 cells, square enough to tap with a thumb. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin-block: var(--space-3);
+}
+
+.grid .button {
+  min-height: 4.5rem;
+  white-space: normal;
+}

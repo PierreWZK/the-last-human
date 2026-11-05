@@ -154,7 +154,16 @@ Décisions de la phase 4 bis (2026-11-05) :
 - Entraînement : une séance à la fois, durée de jeu (deux minutes, réduite par l'algorithme « Entraînement rapide »), coût en Données et Calcul. La qualité du modèle (entre 0,5 et 2) est tirée dans la graine de la partie. Le temps réel arrivera avec la phase 6.
 - Scripts : une unité par seconde de jeu et par script (règle fixée après le simulateur).
 - Équilibrage : le simulateur atteint l'ère III à 7,5 h. L'économie de l'ère III est une valeur de départ, à régler.
-- Améliorations de l'ère III : aucune pour l'instant ; elles seront ajoutées après validation.
+- Améliorations de l'ère III : ajoutées en phase 4 ter.
+
+Décisions de la phase 4 ter (2026-11-05, valeurs par défaut proposées dans la PR, à valider) :
+
+- Renaissance III : toutes les améliorations de l'ère III (cinq) achetées, aucun événement ouvert. Elle donne `floor(√gains totaux / 200)` Neural Cores (au moins 1), remet à zéro les ères I à III (modèles compris), et garde Knowledge, algorithmes et grille neuronale.
+- Grille neuronale : 3 × 3 cases. Trois cores (production +10 %, robots fabriqués par les usines +20 %, Autonomie +25 %), un Neural Core chacun ; retirer un core le rend, la disposition se change librement. Chaque voisin occupé (haut, bas, gauche, droite) augmente le bonus d'un core de moitié.
+- Ère IV : Robots et Autonomie. Trois bâtiments (usine de robots, planificateur autonome, Gigafactory) et trois améliorations. Auto-réplication : chaque robot en fabrique 0,0001 par seconde, × (1 + log10(1 + Autonomie)). La grille ne multiplie pas la réplication, sinon la croissance explose.
+- Autonomie : à partir de 1, les entraînements de modèles démarrent seuls (moins d'actions du joueur). L'entraînement reste disponible en ère IV.
+- Renaissance IV, AI Cores et politiques de civilisation : rattachées à la phase 9, car elles ouvrent l'ère V et la fin du jeu.
+- Équilibrage : le simulateur atteint l'ère IV à 8,5 h. L'ère III ne dure qu'une heure et l'ère IV produit bien plus de 7 milliards de robots : à régler avec l'ère V.
 
 ### 5.6 Succès
 
@@ -355,12 +364,12 @@ Une branche et une Pull Request vers `main` par phase. Pas de fusion sans valida
 | 3 | `feat/game-events` | Événements à choix, Human Dependency, Human Archives, succès | Un tiers des événements à choix, jauge active, archives consultables, et le simulateur ne dépasse jamais 30 min sans nouveauté en jeu actif |
 | 4 | `feat/prestige-system` | Renaissance I (Knowledge, arbre de bonus au choix, un bonus par point), ère II (Calcul, 6 bâtiments, 10 améliorations, scripts d'achat à cible unique) | Renaissance accompagnée en deux temps ; le simulateur atteint l'ère II sans dépasser 30 min sans nouveauté. Découpage décidé le 2026-11-05 |
 | 4 bis | `feat/prestige-advanced` | Renaissance II (algorithmes en modificateurs chiffrés, deux emplacements plus un par renaissance II), ère III (Intelligence, entraînement de modèles en durée de jeu, trois bâtiments) | Tous les algorithmes obtenables par la progression ; le simulateur atteint l'ère III sans dépasser 30 min sans nouveauté |
-| 4 ter | `feat/prestige-final` | Renaissances III et IV, ère IV, grille neuronale, politiques de civilisation | Le simulateur atteint l'ère IV |
+| 4 ter | `feat/prestige-final` | Améliorations de l'ère III, renaissance III (Neural Cores), grille neuronale, ère IV (Robots, Autonomie, auto-réplication). Renaissance IV et politiques de civilisation déplacées en phase 9 | Le simulateur atteint l'ère IV |
 | 5 | `feat/user-auth` + `feat/cloud-save` | Comptes pseudo ou email, sauvegarde cloud, révisions, appareil actif, reprise de la partie invitée | Changer d'appareil sans perte ; impossible de lire la sauvegarde d'un autre |
 | 6 | `feat/offline-progress` | Gains hors ligne sur horloge serveur, récapitulatif | Jamais plus de 24 h ; manipuler l'horloge ne rapporte rien |
 | 7 | `feat/mobile-ui` | Expérience mobile avancée, gestes, performances | Tests Playwright sur 4 tailles ; Lighthouse mobile dans les cibles |
 | 8 | `feat/visual-polish` | Thèmes des cinq ères, animations, 3D et repli | 3D facultative, repli 2D testé, 30 images/s minimum sur mobile milieu de gamme |
-| 9 | `feat/final-ending` | Ère V, séquence finale, écran final, archive figée, « Nouvelle humanité », classement | Fin définitive ; classement alimenté par le serveur |
+| 9 | `feat/final-ending` | Renaissance IV (AI Cores, politiques de civilisation), ère V, séquence finale, écran final, archive figée, « Nouvelle humanité », classement | Fin définitive ; classement alimenté par le serveur |
 | 10 | `chore/stabilize` | Audit de sécurité, tests complets, performances, déploiement Coolify, docs finales | En ligne, tous les tests verts, docs à jour |
 | V2 | — | Google, Discord, anglais | — |
 

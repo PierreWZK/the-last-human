@@ -34,7 +34,7 @@ describe("ère II : production et scripts", () => {
       ...base,
       buildings: { ...base.buildings, buyScript: 1 },
       scriptTarget: "homePage" as const,
-      resources: { money: D(1000), data: D(0), compute: D(0), intelligence: D(0) },
+      resources: { money: D(1000), data: D(0), compute: D(0), intelligence: D(0), robots: D(0), autonomy: D(0) },
     };
     const after = tick(s, 1000);
     expect(after.buildings.homePage).toBeGreaterThan(0);
@@ -47,7 +47,7 @@ describe("ère II : production et scripts", () => {
       ...base,
       buildings: { ...base.buildings, buyScript: 2 },
       scriptTarget: "homePage" as const,
-      resources: { money: D(1_000_000), data: D(0), compute: D(0), intelligence: D(0) },
+      resources: { money: D(1_000_000), data: D(0), compute: D(0), intelligence: D(0), robots: D(0), autonomy: D(0) },
     };
     // 300 ms: no second has passed, nothing is bought.
     expect(tick(s, 300).buildings.homePage).toBe(0);
@@ -57,13 +57,13 @@ describe("ère II : production et scripts", () => {
 
   it("sans script, la cible n'est pas achetée", () => {
     const base = eraTwo();
-    const s = { ...base, scriptTarget: "homePage" as const, resources: { money: D(1000), data: D(0), compute: D(0), intelligence: D(0) } };
+    const s = { ...base, scriptTarget: "homePage" as const, resources: { money: D(1000), data: D(0), compute: D(0), intelligence: D(0), robots: D(0), autonomy: D(0) } };
     expect(tick(s, 100).buildings.homePage).toBe(0);
   });
 
   it("sans cible, le script ne fait rien", () => {
     const base = eraTwo();
-    const s = { ...base, buildings: { ...base.buildings, buyScript: 1 }, resources: { money: D(1000), data: D(0), compute: D(0), intelligence: D(0) } };
+    const s = { ...base, buildings: { ...base.buildings, buyScript: 1 }, resources: { money: D(1000), data: D(0), compute: D(0), intelligence: D(0), robots: D(0), autonomy: D(0) } };
     expect(tick(s, 100).buildings.homePage).toBe(0);
   });
 
@@ -100,7 +100,7 @@ describe("ère II : renaissance", () => {
 
 describe("sauvegarde v4", () => {
   it("un aller-retour conserve l'ère, la cible et le Calcul", () => {
-    const s = eraTwo({ scriptTarget: "shop", resources: { money: D(3), data: D(0), compute: D(42), intelligence: D(0) } });
+    const s = eraTwo({ scriptTarget: "shop", resources: { money: D(3), data: D(0), compute: D(42), intelligence: D(0), robots: D(0), autonomy: D(0) } });
     const loaded = deserialize(serialize(s));
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
@@ -142,7 +142,7 @@ describe("ère II : visibilité et améliorations", () => {
   });
 
   it("en ère I, on ne peut pas acheter un bâtiment ni une amélioration de l'ère II", () => {
-    const s = { ...createInitialState(), resources: { money: D(1e9), data: D(1e9), compute: D(1e9), intelligence: D(0) } };
+    const s = { ...createInitialState(), resources: { money: D(1e9), data: D(1e9), compute: D(1e9), intelligence: D(0), robots: D(0), autonomy: D(0) } };
     expect(buyBuilding(s, "database", 1)).toBe(s);
     const owning = { ...s, buildings: { ...s.buildings, database: 10 } };
     expect(canBuyUpgrade(owning, "memoryCache")).toBe(false);

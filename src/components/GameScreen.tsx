@@ -5,12 +5,18 @@ import { ACHIEVEMENTS, ARCHIVES } from "@/content/events1";
 import { KNOWLEDGE_BONUSES } from "@/content/knowledge";
 import { ALGORITHMS } from "@/content/algorithms";
 import { TRAINING } from "@/content/era3";
+import { AUTO_TRAINING_AUTONOMY } from "@/content/era4";
+import { CORES } from "@/content/neural";
 import {
   canBuyUpgrade,
   algorithmPointGain,
   algorithmSlots,
   canRenaissance,
   canRenaissance2,
+  canRenaissance3,
+  coreFactor,
+  neuralCoreGain,
+  replicationRate,
   knowledgeGain,
   getEvent,
   humanDependency,
@@ -111,6 +117,14 @@ export function GameScreen() {
                 <dd className={styles.rate}>+{formatNumber(rates.compute)} {fr.resources.perSecond}</dd>
               </div>
             )}
+            {state.era >= 4 &&
+              (["robots", "autonomy"] as const).map((r) => (
+                <div key={r}>
+                  <dt>{fr.resources[r]}</dt>
+                  <dd className={styles.big}>{formatNumber(state.resources[r])}</dd>
+                  <dd className={styles.rate}>+{formatNumber(rates[r])} {fr.resources.perSecond}</dd>
+                </div>
+              ))}
           </dl>
           <p className={styles.muted}>
             {fr.resources.totalMoney} : {formatNumber(state.totalMoney)}
@@ -166,9 +180,25 @@ export function GameScreen() {
           <UpgradeList state={state} onBuy={store.upgrade} />
           <RenaissancePanel state={state} onRenaissance={store.renaissance} />
           <KnowledgeTree state={state} onBuy={store.buyKnowledge} />
-          <Renaissance2Panel state={state} onRenaissance={store.renaissance2} />
+          <NextRenaissancePanel
+            state={state}
+            era={2}
+            ready={canRenaissance2(state)}
+            texts={fr.renaissance2}
+            gain={algorithmPointGain(state)}
+            onRenaissance={store.renaissance2}
+          />
+          <NextRenaissancePanel
+            state={state}
+            era={3}
+            ready={canRenaissance3(state)}
+            texts={fr.renaissance3}
+            gain={neuralCoreGain(state)}
+            onRenaissance={store.renaissance3}
+          />
           <AlgorithmsPanel state={state} store={store} />
           <TrainingPanel state={state} onStart={store.startTraining} />
+          <NeuralGridPanel state={state} store={store} />
         </section>
 
         <section className={`${styles.window} ${tab === "archives" ? styles.active : ""}`} aria-labelledby="w-arch">
@@ -349,13 +379,28 @@ function KnowledgeTree({ state, onBuy }: { state: GameState; onBuy: (id: string)
   );
 }
 
-function Renaissance2Panel({ state, onRenaissance }: { state: GameState; onRenaissance: () => void }) {
+/** Renaissance II and III: same two steps as the first one, for the era that ends. */
+function NextRenaissancePanel({
+  state,
+  era,
+  ready,
+  texts,
+  gain,
+  onRenaissance,
+}: {
+  state: GameState;
+  era: 2 | 3;
+  ready: boolean;
+  texts: { title: string; locked: string; lose: string; keep: string; gain: string };
+  gain: number;
+  onRenaissance: () => void;
+}) {
   const [preparing, setPreparing] = useState(false);
-  if (state.era !== 2) return null;
-  if (!canRenaissance2(state)) return <p className={styles.muted}>{fr.renaissance2.locked}</p>;
+  if (state.era !== era) return null;
+  if (!ready) return <p className={styles.muted}>{texts.locked}</p>;
   return (
     <div className={styles.event}>
-      <h2 className={styles.windowTitle}>{fr.renaissance2.title}</h2>
+      <h2 className={styles.windowTitle}>{texts.title}</h2>
       {!preparing ? (
         <div className={styles.buyRow}>
           <button type="button" className={styles.button} onClick={() => setPreparing(true)}>
@@ -365,9 +410,9 @@ function Renaissance2Panel({ state, onRenaissance }: { state: GameState; onRenai
       ) : (
         <>
           <h3 className={styles.itemName}>{fr.renaissance.explainTitle}</h3>
-          <p className={styles.itemText}>{fr.renaissance2.lose}</p>
-          <p className={styles.itemText}>{fr.renaissance2.keep}</p>
-          <p className={styles.itemText}>{t(fr.renaissance2.gain, { points: algorithmPointGain(state) })}</p>
+          <p className={styles.itemText}>{texts.lose}</p>
+          <p className={styles.itemText}>{texts.keep}</p>
+          <p className={styles.itemText}>{t(texts.gain, { points: gain })}</p>
           <div className={styles.buyRow}>
             <button type="button" className={styles.button} onClick={onRenaissance}>
               {fr.renaissance.confirm}
@@ -438,7 +483,7 @@ function AlgorithmsPanel({ state, store }: { state: GameState; store: ReturnType
 }
 
 function TrainingPanel({ state, onStart }: { state: GameState; onStart: () => void }) {
-  if (state.era !== 3) return null;
+  if (state.era < 3) return null;
   const affordable = state.resources.data.gte(TRAINING.dataCost) && state.resources.compute.gte(TRAINING.computeCost);
   return (
     <div className={styles.event}>
@@ -457,6 +502,73 @@ function TrainingPanel({ state, onStart }: { state: GameState; onStart: () => vo
           {state.training ? fr.training.running : fr.training.start}
         </button>
       </div>
+      {state.era >= 4 && (
+        <p className={styles.muted}>{t(fr.autonomy.autoTraining, { threshold: AUTO_TRAINING_AUTONOMY })}</p>
+      )}
+    </div>
+  );
+}
+
+/** Neural grid (renaissance III): pick a core, then a free cell; a placed core is removed by a tap. */
+function NeuralGridPanel({ state, store }: { state: GameState; store: ReturnType<typeof getStore> }) {
+  const [selected, setSelected] = useState(CORES[0].id);
+  if (state.renaissances3 === 0) return null;
+  const nameOf = (id: string) => CORES.find((c) => c.id === id)?.name ?? id;
+  return (
+    <div className={styles.event}>
+      <h2 className={styles.windowTitle}>{fr.grid.title}</h2>
+      <p className={styles.muted}>{t(fr.grid.cores, { count: state.neuralCores })}</p>
+      <p className={styles.muted}>{fr.grid.hint}</p>
+      <div className={styles.buyRow} role="radiogroup" aria-label={fr.grid.title}>
+        {CORES.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            role="radio"
+            aria-checked={selected === c.id}
+            className={styles.button}
+            onClick={() => setSelected(c.id)}
+            title={c.description}
+          >
+            {selected === c.id ? "● " : ""}
+            {c.name}
+          </button>
+        ))}
+      </div>
+      <div className={styles.grid}>
+        {state.neuralGrid.map((id, cell) =>
+          id ? (
+            <button
+              key={cell}
+              type="button"
+              className={styles.button}
+              aria-label={t(fr.grid.cell, { n: cell + 1, name: nameOf(id), factor: coreFactor(state.neuralGrid, cell).toFixed(2) })}
+              onClick={() => store.removeCore(cell)}
+            >
+              {nameOf(id)}
+              <br />×{coreFactor(state.neuralGrid, cell).toFixed(2)}
+            </button>
+          ) : (
+            <button
+              key={cell}
+              type="button"
+              className={styles.button}
+              disabled={state.neuralCores < 1}
+              aria-label={t(fr.grid.place, { n: cell + 1, name: nameOf(selected) })}
+              onClick={() => store.placeCore(cell, selected)}
+            >
+              {fr.grid.empty}
+            </button>
+          ),
+        )}
+      </div>
+      {state.era >= 4 && (
+        <p className={styles.muted}>
+          {t(fr.autonomy.replication, {
+            rate: replicationRate(state).toFixed(5),
+          })}
+        </p>
+      )}
     </div>
   );
 }

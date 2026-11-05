@@ -25,6 +25,9 @@ import {
   clickManual,
   equipAlgorithm,
   renaissance2,
+  canRenaissance3,
+  renaissance3,
+  placeCore,
   startTraining,
   requirementMet as requirementsMet,
   createInitialState,
@@ -39,6 +42,8 @@ import {
 import { ZERO, formatNumber } from "@/game/decimal";
 import { ALGORITHMS } from "@/content/algorithms";
 import { UPGRADES_ERA2 } from "@/content/era2";
+import { UPGRADES_ERA3 } from "@/content/era3";
+import { CORES } from "@/content/neural";
 import type { BuildingId, GameState } from "@/game/types";
 
 export interface Unlock {
@@ -62,7 +67,13 @@ export interface SimResult {
   renaissanceMinute: number | null;
   /** Game minute of the second renaissance (era III opens), or null if never. */
   renaissance2Minute: number | null;
+  /** Game minute of the third renaissance (era IV opens), or null if never. */
+  renaissance3Minute: number | null;
   models: number;
+  /** Era III upgrades still unbought at the end of the run (blocks renaissance III). */
+  missingEra3Upgrades: string[];
+  finalRobots: string;
+  finalAutonomy: string;
   /** Era II upgrades still unbought at the end of the run (blocks renaissance II). */
   missingEra2Upgrades: string[];
   finalCompute: string;
@@ -85,6 +96,7 @@ export function simulate({ hours, clicksPerSecond }: SimOptions): SimResult {
   let eraDoneMinute: number | null = null;
   let renaissanceMinute: number | null = null;
   let renaissance2Minute: number | null = null;
+  let renaissance3Minute: number | null = null;
 
   const totalSeconds = Math.round(hours * 3600);
   for (let second = 1; second <= totalSeconds; second++) {
@@ -114,6 +126,11 @@ export function simulate({ hours, clicksPerSecond }: SimOptions): SimResult {
       renaissance2Minute ??= minute;
       unlocks.push({ minute, label: "Renaissance : ère III" });
     }
+    if (canRenaissance3(state)) {
+      state = renaissance3(state);
+      renaissance3Minute ??= minute;
+      unlocks.push({ minute, label: "Renaissance : ère IV" });
+    }
   }
 
   const rates = productionPerSecond(state);
@@ -124,7 +141,11 @@ export function simulate({ hours, clicksPerSecond }: SimOptions): SimResult {
     eraDoneMinute,
     renaissanceMinute,
     renaissance2Minute,
+    renaissance3Minute,
     models: state.models.length,
+    missingEra3Upgrades: UPGRADES_ERA3.filter((u) => !state.upgrades[u.id]).map((u) => u.name),
+    finalRobots: formatNumber(state.resources.robots),
+    finalAutonomy: formatNumber(state.resources.autonomy),
     missingEra2Upgrades: UPGRADES_ERA2.filter((u) => !state.upgrades[u.id]).map((u) => u.name),
     finalCompute: formatNumber(state.resources.compute),
     buildingsOwned: { ...state.buildings },
@@ -136,8 +157,13 @@ export function simulate({ hours, clicksPerSecond }: SimOptions): SimResult {
  * else buy the building with the shortest payback (cost ÷ real gain of one unit).
  */
 function decide(state: GameState): GameState {
-  // Era III: keep one training run going; spend algorithm points, then equip free slots.
-  if (state.era === 3 && !state.training) {
+  // Neural grid: fill the cells in order, cycling through the core kinds.
+  if (state.neuralCores > 0) {
+    const cell = state.neuralGrid.indexOf(null);
+    if (cell >= 0) return placeCore(state, cell, CORES[cell % CORES.length].id);
+  }
+  // Era III and later: keep one training run going; spend algorithm points, then equip free slots.
+  if (state.era >= 3 && !state.training) {
     const trained = startTraining(state);
     if (trained !== state) return trained;
   }
@@ -245,9 +271,15 @@ function report(label: string, result: SimResult, hours: number): boolean {
     `Renaissance II (ère III) : ${result.renaissance2Minute === null ? "jamais" : `à ${(result.renaissance2Minute / 60).toFixed(1)} h`}, modèles entraînés : ${result.models}`,
   );
   console.log(`Argent final : ${result.finalMoney} (+${result.finalRate} / s), Calcul final : ${result.finalCompute}`);
+  console.log(
+    `Renaissance III (ère IV) : ${result.renaissance3Minute === null ? "jamais" : `à ${(result.renaissance3Minute / 60).toFixed(1)} h`}, robots : ${result.finalRobots}, Autonomie : ${result.finalAutonomy}`,
+  );
+  if (result.missingEra3Upgrades.length) console.log(`Améliorations de l'ère III manquantes : ${result.missingEra3Upgrades.join(", ")}`);
   if (result.missingEra2Upgrades.length) console.log(`Améliorations de l'ère II manquantes : ${result.missingEra2Upgrades.join(", ")}`);
-  const eraTwo = ALL_BUILDINGS.filter((b) => b.era === 2).map((b) => `${b.name} ${result.buildingsOwned[b.id]}`);
-  console.log(`Bâtiments de l'ère II : ${eraTwo.join(", ")}`);
+  for (const era of [2, 3, 4]) {
+    const owned = ALL_BUILDINGS.filter((b) => b.era === era).map((b) => `${b.name} ${result.buildingsOwned[b.id]}`);
+    console.log(`Bâtiments de l'ère ${["", "I", "II", "III", "IV"][era]} : ${owned.join(", ")}`);
+  }
   console.log("Premiers déblocages :");
   for (const u of unlocks.slice(0, 12)) console.log(`  ${u.minute.toFixed(1).padStart(6)} min  ${u.label}`);
 
@@ -270,11 +302,12 @@ function report(label: string, result: SimResult, hours: number): boolean {
     eraHours <= 10 &&
     maxGap <= 30 &&
     result.renaissanceMinute !== null &&
-    result.renaissance2Minute !== null;
+    result.renaissance2Minute !== null &&
+    result.renaissance3Minute !== null;
   console.log(
     ok
       ? "→ cibles atteintes"
-      : "→ cibles NON atteintes (rythme 2–5 min, ère I entre 6 et 10 h, écart ≤ 30 min, ères II et III atteintes)",
+      : "→ cibles NON atteintes (rythme 2–5 min, ère I entre 6 et 10 h, écart ≤ 30 min, ères II, III et IV atteintes)",
   );
   return ok;
 }

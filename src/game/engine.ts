@@ -15,6 +15,13 @@ import {
   type AchievementInput,
 } from "@/content/events1";
 import { KNOWLEDGE_BONUSES, KNOWLEDGE_DIVISOR } from "@/content/knowledge";
+import {
+  AUTO_TRAINING_AUTONOMY,
+  BUILDINGS_ERA4,
+  REPLICATION_PER_SECOND,
+  UPGRADES_ERA4,
+} from "@/content/era4";
+import { CORES, GRID_CELLS, GRID_SIDE, NEIGHBOR_BONUS, NEURAL_CORE_DIVISOR, type CoreKind } from "@/content/neural";
 import { D, ZERO } from "./decimal";
 import { nextRandom } from "./rng";
 import {
@@ -36,9 +43,17 @@ export const MANUAL_BASE = D(1);
 export type BuyMode = number | "max";
 
 /** Every building of every era. Eras only decide which ones the player can see. */
-export const ALL_BUILDINGS = [...BUILDINGS, ...BUILDINGS_ERA2, ...BUILDINGS_ERA3];
+export const ALL_BUILDINGS = [...BUILDINGS, ...BUILDINGS_ERA2, ...BUILDINGS_ERA3, ...BUILDINGS_ERA4];
 
-export const ALL_UPGRADES = [...UPGRADES, ...UPGRADES_ERA2, ...UPGRADES_ERA3];
+export const ALL_UPGRADES = [...UPGRADES, ...UPGRADES_ERA2, ...UPGRADES_ERA3, ...UPGRADES_ERA4];
+
+export const RESOURCE_IDS: ResourceId[] = ["money", "data", "compute", "intelligence", "robots", "autonomy"];
+
+function emptyResources(): Record<ResourceId, Decimal> {
+  return { money: ZERO, data: ZERO, compute: ZERO, intelligence: ZERO, robots: ZERO, autonomy: ZERO };
+}
+
+const CORE_BY_ID = new Map(CORES.map((c) => [c.id, c]));
 
 const ALGORITHM_BY_ID = new Map(ALGORITHMS.map((a) => [a.id, a]));
 
@@ -61,7 +76,7 @@ export function createInitialState(seed = 1): GameState {
   return {
     schemaVersion: SCHEMA_VERSION,
     elapsedMs: 0,
-    resources: { money: ZERO, data: ZERO, compute: ZERO, intelligence: ZERO },
+    resources: emptyResources(),
     totalMoney: ZERO,
     totalClicks: 0,
     buildings: Object.fromEntries(ALL_BUILDINGS.map((b) => [b.id, 0])) as Record<BuildingId, number>,
@@ -82,6 +97,9 @@ export function createInitialState(seed = 1): GameState {
     equippedAlgorithms: [],
     models: [],
     training: null,
+    renaissances3: 0,
+    neuralCores: 0,
+    neuralGrid: Array<string | null>(GRID_CELLS).fill(null),
     knowledgePoints: 0,
     knowledgeBonuses: {},
   };
@@ -193,8 +211,9 @@ export function intelligenceMultiplier(state: GameState): number {
 
 /** Passive production per second, per resource (buildings only). */
 export function productionPerSecond(state: GameState): Record<ResourceId, Decimal> {
-  const rates: Record<ResourceId, Decimal> = { money: ZERO, data: ZERO, compute: ZERO, intelligence: ZERO };
-  const factor = timedFactor(state) * achievementBonus(state) * knowledgeMultiplier(state, "all");
+  const rates = emptyResources();
+  const factor =
+    timedFactor(state) * achievementBonus(state) * knowledgeMultiplier(state, "all") * gridFactor(state, "production");
   for (const def of ALL_BUILDINGS) {
     const owned = state.buildings[def.id];
     if (owned === 0) continue;
@@ -214,6 +233,10 @@ export function productionPerSecond(state: GameState): Record<ResourceId, Decima
   rates.money = rates.money.mul(boost);
   rates.data = rates.data.mul(boost);
   rates.compute = rates.compute.mul(boost);
+  // Era IV: robots build robots, faster with Autonomie; the neural grid boosts both.
+  // The grid boosts the factories only: boosting replication would multiply the exponent.
+  rates.robots = rates.robots.mul(gridFactor(state, "robots")).add(state.resources.robots.mul(replicationRate(state)));
+  rates.autonomy = rates.autonomy.mul(gridFactor(state, "autonomy"));
   return rates;
 }
 
@@ -272,7 +295,7 @@ export function renaissance(state: GameState): GameState {
   if (!canRenaissance(state)) return state;
   return refreshUnlocks({
     ...state,
-    resources: { money: ZERO, data: ZERO, compute: ZERO, intelligence: ZERO },
+    resources: emptyResources(),
     totalMoney: ZERO,
     buildings: Object.fromEntries(ALL_BUILDINGS.map((b) => [b.id, 0])) as Record<BuildingId, number>,
     upgrades: {},
@@ -378,19 +401,13 @@ export function tick(state: GameState, dtMs: number): GameState {
   const seconds = dtMs / 1000;
   const rates = productionPerSecond(state);
   const gainMoney = rates.money.mul(seconds);
-  const gainData = rates.data.mul(seconds);
-  const gainCompute = rates.compute.mul(seconds);
-  const gainIntelligence = rates.intelligence.mul(seconds);
   const elapsedMs = state.elapsedMs + dtMs;
   let next: GameState = {
     ...state,
     elapsedMs,
-    resources: {
-      money: state.resources.money.add(gainMoney),
-      data: state.resources.data.add(gainData),
-      compute: state.resources.compute.add(gainCompute),
-      intelligence: state.resources.intelligence.add(gainIntelligence),
-    },
+    resources: Object.fromEntries(
+      RESOURCE_IDS.map((r) => [r, state.resources[r].add(rates[r].mul(seconds))]),
+    ) as Record<ResourceId, Decimal>,
     totalMoney: state.totalMoney.add(gainMoney),
     effects: state.effects.filter((e) => e.untilMs > elapsedMs),
   };
@@ -407,6 +424,8 @@ export function tick(state: GameState, dtMs: number): GameState {
 
   // A training run that has finished adds a model.
   if (next.training && elapsedMs >= next.training.endsAtMs) next = finishTraining(next);
+  // With enough Autonomie, a new run starts on its own (era IV: fewer player actions).
+  if (!next.training && next.resources.autonomy.gte(AUTO_TRAINING_AUTONOMY)) next = startTraining(next);
 
   // The scripted event comes first; random events only after it has been answered.
   if (next.event.status === "pending" && next.totalMoney.gte(Y2K_TRIGGER_MONEY)) {
@@ -490,7 +509,7 @@ export function resolveY2K(state: GameState, choice: "patch" | "ignore"): GameSt
 
 /** Starts a training run (era III): one at a time, paid in Données and Calcul. */
 export function startTraining(state: GameState): GameState {
-  if (state.era !== 3 || state.training) return state;
+  if (state.era < 3 || state.training) return state;
   const data = D(TRAINING.dataCost);
   const compute = D(TRAINING.computeCost);
   if (state.resources.data.lt(data) || state.resources.compute.lt(compute)) return state;
@@ -529,7 +548,7 @@ export function renaissance2(state: GameState): GameState {
   if (!canRenaissance2(state)) return state;
   return refreshUnlocks({
     ...state,
-    resources: { money: ZERO, data: ZERO, compute: ZERO, intelligence: ZERO },
+    resources: emptyResources(),
     totalMoney: ZERO,
     buildings: Object.fromEntries(ALL_BUILDINGS.map((b) => [b.id, 0])) as Record<BuildingId, number>,
     upgrades: {},
@@ -603,4 +622,86 @@ export function refreshUnlocks(state: GameState): GameState {
     archives: archivesChanged ? archives : state.archives,
     achievements: achievementsChanged ? achievements : state.achievements,
   };
+}
+
+/** Robots made per robot and per second: REPLICATION_PER_SECOND × (1 + log10(1 + Autonomie)). */
+export function replicationRate(state: GameState): number {
+  return REPLICATION_PER_SECOND * (1 + Math.log10(1 + state.resources.autonomy.toNumber()));
+}
+
+/** Renaissance III: needs every upgrade of era III. Opens era IV. */
+export function canRenaissance3(state: GameState): boolean {
+  return state.era === 3 && state.event.status !== "open" && UPGRADES_ERA3.every((u) => state.upgrades[u.id]);
+}
+
+/** Neural Cores a renaissance III would grant now: floor(√gains totaux / NEURAL_CORE_DIVISOR), at least 1. */
+export function neuralCoreGain(state: GameState): number {
+  return Math.max(1, Math.floor(Math.sqrt(state.totalMoney.toNumber()) / NEURAL_CORE_DIVISOR));
+}
+
+/** Renaissance III: resets eras I to III. Keeps Knowledge, algorithms, the neural grid and achievements. */
+export function renaissance3(state: GameState): GameState {
+  if (!canRenaissance3(state)) return state;
+  return refreshUnlocks({
+    ...state,
+    resources: emptyResources(),
+    totalMoney: ZERO,
+    buildings: Object.fromEntries(ALL_BUILDINGS.map((b) => [b.id, 0])) as Record<BuildingId, number>,
+    upgrades: {},
+    effects: [],
+    era: 4,
+    scriptTarget: null,
+    models: [],
+    training: null,
+    renaissances: state.renaissances + 1,
+    renaissances3: state.renaissances3 + 1,
+    neuralCores: state.neuralCores + neuralCoreGain(state),
+    nextEventAtMs: state.elapsedMs + EVENT_GAP_MS.min,
+  });
+}
+
+/** Places a core in an empty cell, for one Neural Core. */
+export function placeCore(state: GameState, cell: number, coreId: string): GameState {
+  if (!CORE_BY_ID.has(coreId) || state.neuralCores < 1) return state;
+  if (!Number.isInteger(cell) || cell < 0 || cell >= GRID_CELLS || state.neuralGrid[cell] !== null) return state;
+  const neuralGrid = [...state.neuralGrid];
+  neuralGrid[cell] = coreId;
+  return { ...state, neuralCores: state.neuralCores - 1, neuralGrid };
+}
+
+/** Removes the core of a cell and gives its Neural Core back. */
+export function removeCore(state: GameState, cell: number): GameState {
+  if (!state.neuralGrid[cell]) return state;
+  const neuralGrid = [...state.neuralGrid];
+  neuralGrid[cell] = null;
+  return { ...state, neuralCores: state.neuralCores + 1, neuralGrid };
+}
+
+/** Number of occupied cells next to `cell` (up, down, left, right). */
+export function coreNeighbors(grid: (string | null)[], cell: number): number {
+  const row = Math.floor(cell / GRID_SIDE);
+  const col = cell % GRID_SIDE;
+  let n = 0;
+  if (row > 0 && grid[cell - GRID_SIDE]) n++;
+  if (row < GRID_SIDE - 1 && grid[cell + GRID_SIDE]) n++;
+  if (col > 0 && grid[cell - 1]) n++;
+  if (col < GRID_SIDE - 1 && grid[cell + 1]) n++;
+  return n;
+}
+
+/** Multiplier of one cell's core: its bonus, plus half of it per occupied neighbour. */
+export function coreFactor(grid: (string | null)[], cell: number): number {
+  const id = grid[cell];
+  const def = id ? CORE_BY_ID.get(id) : undefined;
+  if (!def) return 1;
+  return 1 + (def.factor - 1) * (1 + NEIGHBOR_BONUS * coreNeighbors(grid, cell));
+}
+
+/** Product of the grid's cores of one kind. */
+export function gridFactor(state: GameState, kind: CoreKind): number {
+  let m = 1;
+  state.neuralGrid.forEach((id, cell) => {
+    if (id && CORE_BY_ID.get(id)?.kind === kind) m *= coreFactor(state.neuralGrid, cell);
+  });
+  return m;
 }
