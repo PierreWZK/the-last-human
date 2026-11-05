@@ -180,6 +180,13 @@ Décisions de la phase 6 (2026-11-05) :
 - Gains impossibles : entre deux sauvegardes, le temps de jeu ne peut pas avancer plus vite que l'horloge du serveur (+5 % et 2 min de marge). Sinon 422, et le client propose de recharger la partie du serveur. Importer une sauvegarde plus avancée que celle du serveur est refusé pour la même raison.
 - Invité : horloge locale en UTC, rien si elle recule, `performance.now()` pendant la session. Un onglet ralenti en arrière-plan rattrape son retard de la même façon.
 
+Décisions de la phase 7 (2026-11-05) :
+
+- Téléphones (moins de 600 px) : barre d'onglets fixée en bas, ressources épinglées en haut, événements en feuille au-dessus de la barre, balayage horizontal pour changer d'onglet.
+- Tablettes (600 à 899 px) : deux colonnes, ressources à gauche, onglet choisi à droite (« Produire » montre les achats).
+- Desktop : sur un bâtiment sélectionné au clavier, 1, 2 et 3 achètent ×1, ×10 et le maximum.
+- Les cinq onglets restent (Produire, Acheter, Améliorer, Archives, Compte) : « Acheter » est trop utilisé pour passer sous « Produire ».
+
 ### 5.6 Succès
 
 Catégories : progression, production, découverte, renaissance, collection (Human Archives), narration, défis (par exemple « finir l'ère I sans cliquer après la 10e minute »). Chaque succès donne +1 % de production globale. Quelques-uns débloquent un élément cosmétique (thème de terminal, son de démarrage).
@@ -382,7 +389,7 @@ Une branche et une Pull Request vers `main` par phase. Pas de fusion sans valida
 | 4 ter | `feat/prestige-final` | Améliorations de l'ère III, renaissance III (Neural Cores), grille neuronale, ère IV (Robots, Autonomie, auto-réplication). Renaissance IV et politiques de civilisation déplacées en phase 9 | Le simulateur atteint l'ère IV |
 | 5 | `feat/user-auth` (une seule PR, comptes et sauvegarde cloud) | Comptes pseudo ou email, sauvegarde cloud, révisions, appareil actif, reprise de la partie invitée | Changer d'appareil sans perte ; impossible de lire la sauvegarde d'un autre |
 | 6 | `feat/offline-progress` | Gains hors ligne sur horloge serveur, récapitulatif | Jamais plus de 24 h ; manipuler l'horloge ne rapporte rien. ✅ Code écrit |
-| 7 | `feat/mobile-ui` | Expérience mobile avancée, gestes, performances | Tests Playwright sur 4 tailles ; Lighthouse mobile dans les cibles |
+| 7 | `feat/mobile-ui` | Expérience mobile avancée, gestes, performances | Tests Playwright sur 4 tailles ; Lighthouse mobile dans les cibles. ✅ Code écrit (Lighthouse non mesuré) |
 | 8 | `feat/visual-polish` | Thèmes des cinq ères, animations, 3D et repli | 3D facultative, repli 2D testé, 30 images/s minimum sur mobile milieu de gamme |
 | 9 | `feat/final-ending` | Renaissance IV (AI Cores, politiques de civilisation), ère V, séquence finale, écran final, archive figée, « Nouvelle humanité », classement | Fin définitive ; classement alimenté par le serveur |
 | 10 | `chore/stabilize` | Audit de sécurité, tests complets, performances, déploiement Coolify, docs finales | En ligne, tous les tests verts, docs à jour |

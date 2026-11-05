@@ -10,6 +10,7 @@ export const viewport: Viewport = {
   themeColor: "#0c0a06",
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover", // safe-area insets for the bottom tab bar
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -45,6 +45,7 @@ export const fr = {
     buyMax: "Max",
     nextMilestone: "Palier suivant : {count} exemplaires (production ×2)",
     lastMilestone: "Tous les paliers atteints",
+    shortcuts: "Clavier : sur un bâtiment, 1 achète ×1, 2 achète ×10, 3 achète le maximum.",
   },
   upgrades: {
     buy: "Acheter",
