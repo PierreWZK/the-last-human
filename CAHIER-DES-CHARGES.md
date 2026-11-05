@@ -143,7 +143,7 @@ Décisions de la phase 4 (2026-11-05) :
 - Knowledge gagné = `floor(√gains totaux / 100)`, au moins 1 point. Valeur de départ, à régler.
 - Arbre de Knowledge : un bonus à choisir par point dépensé (quatre bonus de départ, un achat chacun), pas d'arbre à prérequis.
 - La renaissance I demande toutes les améliorations de l'ère I, et aucun événement ouvert. En ère II, elle n'est plus proposée : la renaissance II arrive en phase 4 bis.
-- Scripts d'achat (option 1) : le joueur désigne une cible ; les scripts l'achètent dès qu'elle est abordable (achat maximal à chaque pas de temps). Les améliorations « vitesse » et « seuil » des scripts n'ont pas de sens avec cette règle : elles sont remplacées par deux bonus de collecte (Tâches planifiées, Scripts en parallèle).
+- Scripts d'achat (option 1) : le joueur désigne une cible ; les scripts l'achètent dès qu'elle est abordable, au rythme d'une unité par seconde de jeu et par script (décision du 2026-11-05, prise après le simulateur). Les améliorations « vitesse » et « seuil » des scripts n'ont pas de sens avec cette règle : elles sont remplacées par deux bonus de collecte (Tâches planifiées, Scripts en parallèle).
 - La scène ne dessine pas encore les bâtiments de l'ère II (prévu avec les thèmes d'ère, phase 8).
 
 ### 5.6 Succès

@@ -31,7 +31,7 @@ import {
 
 export const MANUAL_BASE = D(1);
 
-export type BuyMode = 1 | 10 | 100 | "max";
+export type BuyMode = number | "max";
 
 /** Every building of every era. Eras only decide which ones the player can see. */
 export const ALL_BUILDINGS = [...BUILDINGS, ...BUILDINGS_ERA2];
@@ -342,8 +342,13 @@ export function tick(state: GameState, dtMs: number): GameState {
   };
 
   // Scripts buy the chosen building as soon as it is affordable (era II).
+  // Each script buys at most one unit per second of game time (decision of 2026-11-05).
+  const secondsCrossed = Math.floor(elapsedMs / 1000) - Math.floor(state.elapsedMs / 1000);
   const scripts = next.buildings.buyScript;
-  if (scripts > 0 && next.scriptTarget) next = buyBuilding(next, next.scriptTarget, "max");
+  if (secondsCrossed > 0 && scripts > 0 && next.scriptTarget) {
+    const units = Math.min(scripts * secondsCrossed, maxAffordable(next, next.scriptTarget));
+    if (units > 0) next = buyBuilding(next, next.scriptTarget, units);
+  }
 
   // The scripted event comes first; random events only after it has been answered.
   if (next.event.status === "pending" && next.totalMoney.gte(Y2K_TRIGGER_MONEY)) {

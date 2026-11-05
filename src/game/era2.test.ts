@@ -36,9 +36,23 @@ describe("ère II : production et scripts", () => {
       scriptTarget: "homePage" as const,
       resources: { money: D(1000), data: D(0), compute: D(0) },
     };
-    const after = tick(s, 100);
+    const after = tick(s, 1000);
     expect(after.buildings.homePage).toBeGreaterThan(0);
     expect(after.resources.money.toNumber()).toBeLessThan(1000);
+  });
+
+  it("un script achète au plus une unité par seconde de jeu", () => {
+    const base = eraTwo();
+    const s = {
+      ...base,
+      buildings: { ...base.buildings, buyScript: 2 },
+      scriptTarget: "homePage" as const,
+      resources: { money: D(1_000_000), data: D(0), compute: D(0) },
+    };
+    // 300 ms: no second has passed, nothing is bought.
+    expect(tick(s, 300).buildings.homePage).toBe(0);
+    // One second: two scripts, one unit each.
+    expect(tick(s, 1000).buildings.homePage).toBe(2);
   });
 
   it("sans script, la cible n'est pas achetée", () => {
