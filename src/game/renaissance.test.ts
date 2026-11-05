@@ -19,7 +19,7 @@ function eraOneDone(): GameState {
   return {
     ...base,
     buildings: { ...base.buildings, homePage: 20 },
-    resources: { money: D(900), data: D(40), compute: D(0) },
+    resources: { money: D(900), data: D(40), compute: D(0), intelligence: D(0) },
     totalMoney: D(1_000_000),
     upgrades: Object.fromEntries(UPGRADES.map((u) => [u.id, true])),
     achievements: { "first-click": true },

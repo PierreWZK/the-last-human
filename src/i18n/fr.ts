@@ -6,6 +6,7 @@ export const fr = {
   eras: {
     1: { name: "Ère I · The Digital Age", years: "1990–2005" },
     2: { name: "Ère II · The Automation Age", years: "2005–2020" },
+    3: { name: "Ère III · The AI Revolution", years: "2020–2040" },
   },
   scripts: {
     label: "Cible des scripts d'achat",
