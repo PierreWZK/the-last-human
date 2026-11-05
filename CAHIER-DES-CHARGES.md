@@ -173,6 +173,13 @@ Décisions de la phase 5 (2026-11-05) :
 - Au branchement d'un compte : la partie locale est envoyée si le compte n'a pas de sauvegarde (reprise de la partie invitée) ou si elle descend de la dernière révision connue de cet appareil ; sinon la partie du serveur est chargée et la locale gardée dans l'emplacement de secours.
 - Export et import en texte dans l'onglet « Compte ». La vérification des gains impossibles par l'horloge serveur arrive avec la phase 6.
 
+Décisions de la phase 6 (2026-11-05) :
+
+- L'absence est rejouée par pas de 10 s de jeu (`src/game/offline.ts`) : scripts, entraînements et événements avancent comme en jeu. Plafond de 24 h, récapitulatif au-delà d'une minute.
+- Joueur connecté : le serveur renvoie `offlineMs` (horloge du serveur depuis la dernière sauvegarde acceptée, `lastSeenAt`). « Reprendre ici » ne remet pas `lastSeenAt` à zéro.
+- Gains impossibles : entre deux sauvegardes, le temps de jeu ne peut pas avancer plus vite que l'horloge du serveur (+5 % et 2 min de marge). Sinon 422, et le client propose de recharger la partie du serveur. Importer une sauvegarde plus avancée que celle du serveur est refusé pour la même raison.
+- Invité : horloge locale en UTC, rien si elle recule, `performance.now()` pendant la session. Un onglet ralenti en arrière-plan rattrape son retard de la même façon.
+
 ### 5.6 Succès
 
 Catégories : progression, production, découverte, renaissance, collection (Human Archives), narration, défis (par exemple « finir l'ère I sans cliquer après la 10e minute »). Chaque succès donne +1 % de production globale. Quelques-uns débloquent un élément cosmétique (thème de terminal, son de démarrage).
@@ -374,7 +381,7 @@ Une branche et une Pull Request vers `main` par phase. Pas de fusion sans valida
 | 4 bis | `feat/prestige-advanced` | Renaissance II (algorithmes en modificateurs chiffrés, deux emplacements plus un par renaissance II), ère III (Intelligence, entraînement de modèles en durée de jeu, trois bâtiments) | Tous les algorithmes obtenables par la progression ; le simulateur atteint l'ère III sans dépasser 30 min sans nouveauté |
 | 4 ter | `feat/prestige-final` | Améliorations de l'ère III, renaissance III (Neural Cores), grille neuronale, ère IV (Robots, Autonomie, auto-réplication). Renaissance IV et politiques de civilisation déplacées en phase 9 | Le simulateur atteint l'ère IV |
 | 5 | `feat/user-auth` (une seule PR, comptes et sauvegarde cloud) | Comptes pseudo ou email, sauvegarde cloud, révisions, appareil actif, reprise de la partie invitée | Changer d'appareil sans perte ; impossible de lire la sauvegarde d'un autre |
-| 6 | `feat/offline-progress` | Gains hors ligne sur horloge serveur, récapitulatif | Jamais plus de 24 h ; manipuler l'horloge ne rapporte rien |
+| 6 | `feat/offline-progress` | Gains hors ligne sur horloge serveur, récapitulatif | Jamais plus de 24 h ; manipuler l'horloge ne rapporte rien. ✅ Code écrit |
 | 7 | `feat/mobile-ui` | Expérience mobile avancée, gestes, performances | Tests Playwright sur 4 tailles ; Lighthouse mobile dans les cibles |
 | 8 | `feat/visual-polish` | Thèmes des cinq ères, animations, 3D et repli | 3D facultative, repli 2D testé, 30 images/s minimum sur mobile milieu de gamme |
 | 9 | `feat/final-ending` | Renaissance IV (AI Cores, politiques de civilisation), ère V, séquence finale, écran final, archive figée, « Nouvelle humanité », classement | Fin définitive ; classement alimenté par le serveur |

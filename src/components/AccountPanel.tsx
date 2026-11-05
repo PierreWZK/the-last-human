@@ -29,10 +29,10 @@ export function CloudBanner() {
     else cloud.disconnect();
   }, [cloud, userId]);
 
-  if (status.kind !== "elsewhere" && status.kind !== "conflict") return null;
+  if (status.kind !== "elsewhere" && status.kind !== "conflict" && status.kind !== "rejected") return null;
   return (
     <div className={styles.notice} role="alert">
-      <p>{status.kind === "elsewhere" ? fr.account.elsewhere : fr.account.conflict}</p>
+      <p>{statusText(status)}</p>
       <button type="button" className={styles.button} onClick={() => void cloud.resumeHere()}>
         {fr.account.resumeHere}
       </button>
@@ -96,6 +96,8 @@ function statusText(status: CloudStatus): string {
       return fr.account.elsewhere;
     case "conflict":
       return fr.account.conflict;
+    case "rejected":
+      return fr.account.rejected;
     case "guest":
       return "";
   }

@@ -20,3 +20,14 @@ export function formatNumber(value: Decimal): string {
   }
   return Math.floor(n).toLocaleString("fr-FR");
 }
+
+/** Formats a duration in French: « 45 s », « 12 min », « 3 h 05 min », « 2 j 4 h ». */
+export function formatDuration(ms: number): string {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  if (s < 60) return `${s} s`;
+  const min = Math.floor(s / 60);
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h} h ${String(min % 60).padStart(2, "0")} min`;
+  return `${Math.floor(h / 24)} j ${h % 24} h`;
+}

@@ -21,12 +21,16 @@ export type CloudStatus =
   | { kind: "synced"; revision: number }
   | { kind: "elsewhere" }
   | { kind: "conflict" }
+  /** The server refused the save: more game time than real time went by (cahier §6). */
+  | { kind: "rejected" }
   | { kind: "offline" };
 
 interface ServerSave {
   revision: number;
   data: string | null;
   activeDevice: string | null;
+  /** Absence measured on the server clock since the last accepted save, capped at 24 h. */
+  offlineMs?: number;
 }
 
 type Fetch = typeof fetch;
@@ -76,6 +80,8 @@ export class CloudSync {
     } else {
       this.takeServer(server, "La partie de votre compte a été chargée. La partie locale est gardée en secours.");
       await this.claim();
+      this.store.setReadOnly(false);
+      this.store.catchUp(server.offlineMs ?? 0);
     }
     this.store.setReadOnly(false);
     this.setStatus({ kind: "synced", revision: this.revision });
@@ -99,6 +105,7 @@ export class CloudSync {
     if (server.data) this.takeServer(server, null);
     else this.revision = server.revision;
     this.store.setReadOnly(false);
+    if (server.data) this.store.catchUp(server.offlineMs ?? 0);
     this.setStatus({ kind: "synced", revision: this.revision });
     this.startTimers();
   }
@@ -126,6 +133,8 @@ export class CloudSync {
       this.lock({ kind: "elsewhere" });
     } else if (response.status === 409) {
       this.lock({ kind: "conflict" });
+    } else if (response.status === 422) {
+      this.lock({ kind: "rejected" });
     } else if (response.status === 401) {
       this.disconnect();
     }

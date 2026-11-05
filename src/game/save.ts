@@ -57,7 +57,8 @@ interface Envelope {
 }
 
 export type LoadResult =
-  | { ok: true; state: GameState }
+  /** `savedAtMs`: when the save was written (UTC), or null if the envelope has no valid date. */
+  | { ok: true; state: GameState; savedAtMs?: number | null }
   | { ok: false; reason: string };
 
 const DECIMAL_PATTERN = /^\d+(\.\d+)?(e[+-]?\d+)?$/;
@@ -116,7 +117,10 @@ export function deserialize(raw: string): LoadResult {
     return { ok: false, reason: "Sauvegarde créée par une version plus récente du jeu" };
   }
   if (!isRecord(parsed.state)) return { ok: false, reason: "État absent" };
-  return migrate(parsed.state, version);
+  const result = migrate(parsed.state, version);
+  if (!result.ok) return result;
+  const savedAtMs = typeof parsed.savedAt === "string" ? Date.parse(parsed.savedAt) : NaN;
+  return { ...result, savedAtMs: Number.isFinite(savedAtMs) ? savedAtMs : null };
 }
 
 /**

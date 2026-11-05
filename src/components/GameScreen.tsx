@@ -34,7 +34,9 @@ import {
   visibleUpgrades,
   type BuyMode,
 } from "@/game/engine";
-import { D, formatNumber } from "@/game/decimal";
+import { D, formatDuration, formatNumber } from "@/game/decimal";
+import { RESOURCE_IDS } from "@/game/engine";
+import type { OfflineReport } from "@/game/offline";
 import { getStore, type StoreSnapshot } from "@/game/store";
 import type { BuildingDef, BuildingId, EventEffect, GameState, UpgradeDef } from "@/game/types";
 import { fr, t } from "@/i18n/fr";
@@ -45,11 +47,11 @@ import { AccountPanel, CloudBanner } from "./AccountPanel";
 
 type Tab = "produce" | "buy" | "upgrade" | "archives" | "account";
 
-const SERVER_SNAPSHOT: StoreSnapshot = { state: createInitialState(), notice: null, clicks: 0, readOnly: false };
+const SERVER_SNAPSHOT: StoreSnapshot = { state: createInitialState(), notice: null, clicks: 0, readOnly: false, offline: null };
 
 export function GameScreen() {
   const store = getStore();
-  const { state, notice } = useSyncExternalStore(store.subscribe, store.getSnapshot, () => SERVER_SNAPSHOT);
+  const { state, notice, offline } = useSyncExternalStore(store.subscribe, store.getSnapshot, () => SERVER_SNAPSHOT);
   const [tab, setTab] = useState<Tab>("produce");
 
   useEffect(() => {
@@ -75,6 +77,8 @@ export function GameScreen() {
       )}
 
       <CloudBanner />
+
+      {offline && <OfflineRecap report={offline} onClose={store.dismissOffline} />}
 
       <nav className={styles.tabs} aria-label="Sections">
         {(["produce", "buy", "upgrade", "archives", "account"] as const).map((key) => (
@@ -219,6 +223,39 @@ export function GameScreen() {
         <p>{fr.footer}</p>
       </footer>
     </main>
+  );
+}
+
+/** Recap of an absence (cahier §6): how long, what was produced, what was reached. */
+function OfflineRecap({ report, onClose }: { report: OfflineReport; onClose: () => void }) {
+  const lines = RESOURCE_IDS.filter((r) => report.produced[r].gt(0)).map((r) =>
+    t(fr.offline.produced, { resource: fr.resources[r], amount: formatNumber(report.produced[r]) }),
+  );
+  const counts = [
+    [report.buildingsBought, fr.offline.bought],
+    [report.modelsTrained, fr.offline.models],
+    [report.archivesFound, fr.offline.archives],
+    [report.achievementsUnlocked, fr.offline.achievements],
+  ] as const;
+  return (
+    <div className={styles.sheetBackdrop}>
+      <section className={styles.sheet} role="dialog" aria-modal="true" aria-labelledby="offline-title">
+        <h2 id="offline-title" className={styles.windowTitle}>{fr.offline.title}</h2>
+        <p className={styles.itemText}>{t(fr.offline.away, { duration: formatDuration(report.awayMs) })}</p>
+        {report.capped && <p className={styles.muted}>{fr.offline.capped}</p>}
+        <ul className={styles.recap}>
+          {lines.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+          {counts.filter(([n]) => n > 0).map(([n, label]) => (
+            <li key={label}>{t(label, { count: n })}</li>
+          ))}
+        </ul>
+        <button type="button" className={styles.manual} onClick={onClose} autoFocus>
+          {fr.offline.close}
+        </button>
+      </section>
+    </div>
   );
 }
 
