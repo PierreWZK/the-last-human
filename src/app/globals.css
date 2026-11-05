@@ -1,0 +1,59 @@
+/* Tokens. Le Poste : phosphore ambre sur noir chaud. Chaque ère redéfinit ces variables. */
+:root {
+  --ink: #0c0a06;
+  --ink-raised: #17130b;
+  --phosphor: #ffb000;
+  --phosphor-dim: #a87300;
+  --line: #3a2a0c;
+
+  --text-sm: 0.875rem;
+  --text-md: 1.125rem;
+  --text-lg: 1.75rem;
+  --text-xl: 2rem;
+
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  background: var(--ink);
+  color: var(--phosphor);
+  font-family: "Consolas", "Lucida Console", "Courier New", monospace;
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-text-size-adjust: 100%;
+}
+
+h1,
+h2 {
+  font-weight: 700;
+}
+
+button {
+  color: inherit;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--phosphor);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

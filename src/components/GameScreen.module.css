@@ -1,0 +1,246 @@
+/* Le Poste — direction A. Phosphore ambre sur verre sombre, fenêtres plates, aucun dégradé. */
+
+.screen {
+  min-height: 100dvh;
+  padding: var(--space-4);
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: var(--space-3);
+}
+
+.title {
+  font-size: var(--text-xl);
+  letter-spacing: 0.08em;
+  margin: 0;
+  color: var(--phosphor);
+}
+
+.era {
+  margin: 0;
+  color: var(--phosphor-dim);
+  font-size: var(--text-sm);
+}
+
+.years {
+  color: var(--phosphor);
+  font-variant-numeric: tabular-nums;
+}
+
+.notice {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--ink-raised);
+  color: var(--phosphor);
+  font-size: var(--text-sm);
+}
+
+.tabs {
+  display: none;
+}
+
+.tab {
+  font: inherit;
+  padding: var(--space-3);
+  min-height: 44px;
+  background: var(--ink-raised);
+  color: var(--phosphor-dim);
+  border: 1px solid var(--line);
+  cursor: pointer;
+}
+
+.tab[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--phosphor);
+}
+
+.grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 900px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.2fr);
+    align-items: start;
+  }
+}
+
+.window {
+  background: var(--ink-raised);
+  padding: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.windowTitle {
+  font-size: var(--text-md);
+  margin: 0;
+  color: var(--phosphor);
+  letter-spacing: 0.04em;
+}
+
+.resources {
+  margin: 0;
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: 1fr 1fr;
+}
+
+.resources dt {
+  color: var(--phosphor-dim);
+  font-size: var(--text-sm);
+}
+
+.resources dd {
+  margin: 0;
+}
+
+.big {
+  font-size: var(--text-lg);
+  color: var(--phosphor);
+  font-variant-numeric: tabular-nums;
+}
+
+.rate {
+  color: var(--phosphor-dim);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.manual {
+  font: inherit;
+  font-size: var(--text-md);
+  min-height: 64px;
+  padding: var(--space-3) var(--space-4);
+  background: var(--phosphor);
+  color: var(--ink);
+  border: 0;
+  cursor: pointer;
+}
+
+.manual:active,
+.button:active,
+.tab:active {
+  transform: translateY(1px);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-4);
+}
+
+.item {
+  display: grid;
+  gap: var(--space-2);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--line);
+}
+
+.itemHead {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  align-items: baseline;
+}
+
+.itemName {
+  color: var(--phosphor);
+}
+
+.itemText {
+  margin: 0;
+  color: var(--phosphor);
+  font-size: var(--text-sm);
+}
+
+.muted {
+  margin: 0;
+  color: var(--phosphor-dim);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.buyRow {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.button {
+  font: inherit;
+  font-size: var(--text-sm);
+  min-height: 44px;
+  min-width: 44px;
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  color: var(--phosphor);
+  border: 1px solid var(--phosphor-dim);
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+.button:disabled {
+  color: var(--phosphor-dim);
+  border-color: var(--line);
+  cursor: not-allowed;
+}
+
+.event {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--phosphor-dim);
+}
+
+.footer {
+  color: var(--phosphor-dim);
+  font-size: var(--text-sm);
+  padding-top: var(--space-3);
+}
+
+.footer p {
+  margin: 0;
+}
+
+/* Mobile : un seul panneau à la fois, navigation en haut. */
+@media (max-width: 899px) {
+  .screen {
+    padding: var(--space-3);
+    padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+  }
+
+  .tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-2);
+  }
+
+  .window {
+    display: none;
+  }
+
+  .window.active {
+    display: grid;
+  }
+
+  .resources {
+    grid-template-columns: 1fr;
+  }
+}
