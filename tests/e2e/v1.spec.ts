@@ -10,6 +10,25 @@ async function openFresh(page: Page) {
 }
 
 /**
+ * Clicks « Taper du code » in batches until the first building is affordable. Works on the
+ * DOM directly: on phones the buy panel is hidden, and role queries skip hidden elements.
+ */
+async function earnUntilAffordable(page: Page) {
+  for (let batch = 0; batch < 20; batch++) {
+    const affordable = await page.evaluate(() => {
+      const buttons = [...document.querySelectorAll("button")];
+      const buy = buttons.find((b) => (b.getAttribute("aria-label") ?? "").startsWith("Page personnelle, ×1"));
+      if (buy && !buy.disabled) return true;
+      const click = buttons.find((b) => b.textContent?.trim() === "Taper du code");
+      for (let i = 0; i < 50; i++) click?.click();
+      return false;
+    });
+    if (affordable) return;
+  }
+  throw new Error("La première page personnelle n'est jamais devenue achetable");
+}
+
+/**
  * Below 900px the layout shows one panel at a time (tabs at the top).
  * Phones and the 768px tablet both use it, so the check is on width, not on device name.
  */
@@ -29,7 +48,7 @@ test("le clic manuel fait monter l'argent", async ({ page }) => {
 
 test("acheter une page personnelle diminue l'argent et ajoute un bâtiment", async ({ page }) => {
   await openFresh(page);
-  for (let i = 0; i < 20; i++) await page.getByRole("button", { name: "Taper du code" }).click();
+  await earnUntilAffordable(page);
   await openBuyPanel(page);
   const buy = page.getByRole("button", { name: /Page personnelle, ×1, coût/ });
   await expect(buy).toBeEnabled();
@@ -39,7 +58,7 @@ test("acheter une page personnelle diminue l'argent et ajoute un bâtiment", asy
 
 test("la progression survit à un rechargement", async ({ page }) => {
   await openFresh(page);
-  for (let i = 0; i < 30; i++) await page.getByRole("button", { name: "Taper du code" }).click();
+  await earnUntilAffordable(page);
   await openBuyPanel(page);
   await page.getByRole("button", { name: /Page personnelle, ×1, coût/ }).click();
   await page.reload();
@@ -91,7 +110,7 @@ test("avec le mouvement réduit, la scène reste une image fixe sans erreur", as
 
 test("l'achat maximum ne rend jamais l'argent négatif", async ({ page }) => {
   await openFresh(page);
-  for (let i = 0; i < 60; i++) await page.getByRole("button", { name: "Taper du code" }).click();
+  await earnUntilAffordable(page);
   await openBuyPanel(page);
   const max = page.getByRole("button", { name: /Page personnelle, Max/ });
   if (await max.isEnabled()) await max.click();

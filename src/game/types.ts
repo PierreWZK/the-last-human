@@ -21,7 +21,9 @@ export interface BuildingDef {
 export type UpgradeTarget =
   | { kind: "manual" }
   | { kind: "building"; building: BuildingId }
-  | { kind: "all" };
+  | { kind: "all" }
+  /** Each owned `source` adds `perUnit` (a fraction, e.g. 0.02 = 2 %) to `building`'s production. */
+  | { kind: "synergy"; building: BuildingId; source: BuildingId; perUnit: number };
 
 export interface UpgradeDef {
   id: string;

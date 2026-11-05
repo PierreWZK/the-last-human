@@ -5,7 +5,22 @@ import type { BuildingDef, UpgradeDef } from "@/game/types";
  * Ère I — The Digital Age (1990–2005). Valeurs de départ : le simulateur (phase 2)
  * les ajustera. Toute ligne ici est une donnée, pas du code.
  */
-export const BUILDINGS: BuildingDef[] = [
+/**
+ * Balance knobs, applied on top of the raw data below. The simulator (`npm run sim`) is
+ * the judge: change a knob, run it, read the report.
+ */
+export const TUNING = {
+  /** Multiplies every building's base cost. */
+  buildingCostScale: 2,
+  /** Cost growth per extra building owned. */
+  buildingGrowth: 1.2,
+  /** Multiplies every upgrade cost and every "total money" requirement. */
+  upgradeCostScale: 15,
+  /** Multiplies the "total money earned" requirements, separately from the costs. */
+  requirementScale: 15,
+};
+
+const RAW_BUILDINGS: BuildingDef[] = [
   {
     id: "homePage",
     name: "Page personnelle",
@@ -62,9 +77,15 @@ export const BUILDINGS: BuildingDef[] = [
   },
 ];
 
+export const BUILDINGS: BuildingDef[] = RAW_BUILDINGS.map((b) => ({
+  ...b,
+  baseCost: b.baseCost.mul(TUNING.buildingCostScale),
+  growth: TUNING.buildingGrowth,
+}));
+
 const none = { kind: "none" as const };
 
-export const UPGRADES: UpgradeDef[] = [
+const RAW_UPGRADES: UpgradeDef[] = [
   // Travail manuel
   { id: "keyboard", name: "Clavier ergonomique", description: "Dix doigts, moins de fatigue : le travail manuel rapporte deux fois plus.", cost: D(50), costResource: "money", target: { kind: "manual" }, factor: 2, requires: none },
   { id: "mouse", name: "Souris optique", description: "Le clic devient deux fois plus précis, donc deux fois plus rentable.", cost: D(200), costResource: "money", target: { kind: "manual" }, factor: 2, requires: none },
@@ -95,12 +116,28 @@ export const UPGRADES: UpgradeDef[] = [
   { id: "longContract", name: "Contrat longue durée", description: "Trois ans d'engagement, un prix cassé. Serveurs loués ×2.", cost: D(500000), costResource: "money", target: { kind: "building", building: "rentedServer" }, factor: 2, requires: { kind: "owned", building: "rentedServer", count: 10 } },
   { id: "liquidCooling", name: "Refroidissement liquide", description: "Les machines chauffent moins, donc tournent plus. Serveurs loués ×2.", cost: D(3000000), costResource: "money", target: { kind: "building", building: "rentedServer" }, factor: 2, requires: { kind: "owned", building: "rentedServer", count: 25 } },
 
+  // Synergies
+  { id: "crossLinks", name: "Liens croisés", description: "Chaque forum ajoute 2 % à la production de la boutique.", cost: D(8000), costResource: "money", target: { kind: "synergy", building: "shop", source: "forum", perUnit: 0.02 }, factor: 1, requires: { kind: "owned", building: "forum", count: 15 } },
+  { id: "webRing", name: "Anneau web", description: "Chaque page personnelle ajoute 1 % à la production des portails.", cost: D(200), costResource: "data", target: { kind: "synergy", building: "portal", source: "homePage", perUnit: 0.01 }, factor: 1, requires: { kind: "owned", building: "homePage", count: 20 } },
+
   // Globales
   { id: "nightBackup", name: "Sauvegarde nocturne", description: "Les données ne se perdent plus. Toute la production ×1,5.", cost: D(100000), costResource: "money", target: { kind: "all" }, factor: 1.5, requires: { kind: "totalMoney", amount: D(50000) } },
   { id: "localNetwork", name: "Réseau local", description: "Un routeur, des câbles partout. Toute la production ×1,5.", cost: D(300), costResource: "data", target: { kind: "all" }, factor: 1.5, requires: { kind: "totalMoney", amount: D(10000) } },
   { id: "wordOfMouth", name: "Bouche-à-oreille", description: "Les gens en parlent. Toute la production ×2.", cost: D(2000000), costResource: "money", target: { kind: "all" }, factor: 2, requires: { kind: "totalMoney", amount: D(1000000) } },
   { id: "dialUpGone", name: "Adieu le modem", description: "Le bip du modem disparaît enfin. Toute la production ×1,5.", cost: D(8000), costResource: "data", target: { kind: "all" }, factor: 1.5, requires: { kind: "totalMoney", amount: D(200000) } },
 ];
+
+export const UPGRADES: UpgradeDef[] = RAW_UPGRADES.map((u) => ({
+  ...u,
+  cost: u.cost.mul(TUNING.upgradeCostScale),
+  requires:
+    u.requires.kind === "totalMoney"
+      ? { ...u.requires, amount: u.requires.amount.mul(TUNING.requirementScale) }
+      : u.requires,
+}));
+
+/** Paliers par bâtiment : chaque seuil atteint double la production de ce bâtiment. */
+export const MILESTONES = [10, 25, 50, 100, 250, 500, 1000];
 
 /** Événement de l'ère I : le bug de l'an 2000. Déclenché une seule fois. */
 export const Y2K_TRIGGER_MONEY = D(5000);

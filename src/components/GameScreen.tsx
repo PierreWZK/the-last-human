@@ -7,10 +7,13 @@ import {
   createInitialState,
   getBuilding,
   manualGain,
+  milestoneMultiplier,
   multiplier,
+  nextMilestone,
   productionPerSecond,
   quote,
   requirementMet,
+  synergyBonus,
   type BuyMode,
 } from "@/game/engine";
 import { formatNumber } from "@/game/decimal";
@@ -144,7 +147,16 @@ function BuildingRow({
       </div>
       <p className={styles.itemText}>{def.description}</p>
       <p className={styles.muted}>
-        {t(fr.buildings.perUnit, { amount: formatNumber(def.produces.perSecond.mul(multiplier(state, def.id))) })}
+        {t(fr.buildings.perUnit, {
+          amount: formatNumber(
+            def.produces.perSecond.mul(multiplier(state, def.id) * synergyBonus(state, def.id) * milestoneMultiplier(owned)),
+          ),
+        })}
+      </p>
+      <p className={styles.muted}>
+        {nextMilestone(owned) === null
+          ? fr.buildings.lastMilestone
+          : t(fr.buildings.nextMilestone, { count: nextMilestone(owned) ?? 0 })}
       </p>
       <div className={styles.buyRow}>
         {modes.map(({ label, mode }) => {
@@ -205,6 +217,9 @@ function UpgradeRow({ def, state, onBuy }: { def: UpgradeDef; state: GameState; 
 function targetLabel(def: UpgradeDef): string {
   if (def.target.kind === "manual") return fr.upgrades.manual;
   if (def.target.kind === "all") return fr.upgrades.all;
+  if (def.target.kind === "synergy") {
+    return t(fr.upgrades.synergy, { source: getBuilding(def.target.source).name, building: getBuilding(def.target.building).name });
+  }
   return getBuilding(def.target.building).name;
 }
 
