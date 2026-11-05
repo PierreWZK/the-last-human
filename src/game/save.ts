@@ -1,5 +1,5 @@
 import { BUILDINGS, UPGRADES } from "@/content/era1";
-import { BUILDINGS_ERA2 } from "@/content/era2";
+import { BUILDINGS_ERA2, UPGRADES_ERA2 } from "@/content/era2";
 import { ACHIEVEMENTS, ARCHIVES, EVENTS, EVENT_GAP_MS, RANDOM_EVENTS } from "@/content/events1";
 import { KNOWLEDGE_BONUSES } from "@/content/knowledge";
 import { D } from "./decimal";
@@ -196,7 +196,7 @@ function validate(raw: Record<string, unknown>): LoadResult {
   }
 
   if (!isRecord(upgrades)) return bad("Améliorations invalides");
-  const upgradeIds = new Set(UPGRADES.map((u) => u.id));
+  const upgradeIds = new Set([...UPGRADES, ...UPGRADES_ERA2].map((u) => u.id));
   const parsedUpgrades: Record<string, true> = {};
   for (const [key, value] of Object.entries(upgrades)) {
     if (!upgradeIds.has(key) || value !== true) return bad(`Amélioration inconnue : ${key}`);

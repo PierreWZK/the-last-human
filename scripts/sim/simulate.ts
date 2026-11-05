@@ -5,8 +5,17 @@
  *  - active play: never more than 30 minutes without something new.
  * Run with `npm run sim`. Exits with code 1 when an active-play target is missed.
  */
-import { BUILDINGS, MILESTONES, UPGRADES } from "@/content/era1";
+import { MILESTONES, UPGRADES } from "@/content/era1";
+import { KNOWLEDGE_BONUSES } from "@/content/knowledge";
 import {
+  ALL_BUILDINGS,
+  ALL_UPGRADES,
+  buyKnowledgeBonus,
+  canRenaissance,
+  renaissance,
+  setScriptTarget,
+  visibleBuildings,
+  visibleUpgrades,
   buyBuilding,
   buyUpgrade,
   canBuyUpgrade,
@@ -41,7 +50,17 @@ export interface SimResult {
   finalRate: string;
   /** Game minute when every upgrade of era I is bought, or null if never. */
   eraDoneMinute: number | null;
+  /** Game minute of the first renaissance (era II opens), or null if never. */
+  renaissanceMinute: number | null;
+  finalCompute: string;
   buildingsOwned: Record<BuildingId, number>;
+}
+
+/** After a renaissance: spend Knowledge (cheapest first), and point the scripts at the best money building. */
+function afterRenaissance(state: GameState): GameState {
+  let s = state;
+  for (const b of [...KNOWLEDGE_BONUSES].sort((a, z) => a.cost - z.cost)) s = buyKnowledgeBonus(s, b.id);
+  return setScriptTarget(s, "rentedServer");
 }
 
 const MAX_ACTIONS_PER_SECOND = 40;
@@ -51,6 +70,7 @@ export function simulate({ hours, clicksPerSecond }: SimOptions): SimResult {
   const unlocks: Unlock[] = [];
   let clickCarry = 0;
   let eraDoneMinute: number | null = null;
+  let renaissanceMinute: number | null = null;
 
   const totalSeconds = Math.round(hours * 3600);
   for (let second = 1; second <= totalSeconds; second++) {
@@ -69,7 +89,12 @@ export function simulate({ hours, clicksPerSecond }: SimOptions): SimResult {
       if (label) unlocks.push({ minute, label });
       state = next;
     }
-    if (eraDoneMinute === null && UPGRADES.every((u) => state.upgrades[u.id])) eraDoneMinute = minute;
+    if (eraDoneMinute === null && state.era === 1 && UPGRADES.every((u) => state.upgrades[u.id])) eraDoneMinute = minute;
+    if (canRenaissance(state)) {
+      state = afterRenaissance(renaissance(state));
+      renaissanceMinute ??= minute;
+      unlocks.push({ minute, label: "Renaissance : ère II" });
+    }
   }
 
   const rates = productionPerSecond(state);
@@ -78,6 +103,8 @@ export function simulate({ hours, clicksPerSecond }: SimOptions): SimResult {
     finalMoney: formatNumber(state.resources.money),
     finalRate: formatNumber(rates.money),
     eraDoneMinute,
+    renaissanceMinute,
+    finalCompute: formatNumber(state.resources.compute),
     buildingsOwned: { ...state.buildings },
   };
 }
@@ -98,19 +125,26 @@ function decide(state: GameState): GameState {
     return resolveEvent(state, choice.id);
   }
 
-  const affordableUpgrade = UPGRADES.filter((u) => canBuyUpgrade(state, u.id)).sort((a, b) =>
+  const affordableUpgrade = visibleUpgrades(state).filter((u) => canBuyUpgrade(state, u.id)).sort((a, b) =>
     a.cost.lt(b.cost) ? -1 : a.cost.gt(b.cost) ? 1 : 0,
   )[0];
   if (affordableUpgrade) return buyUpgrade(state, affordableUpgrade.id);
 
   // Save for the cheapest upgrade whose requirement is already met: a building is bought only
   // if the player can still afford that upgrade afterwards (a real player saves, too).
-  const savingFor = UPGRADES.filter((u) => !state.upgrades[u.id] && requirementsMet(state, u.requires)).sort(
+  // Era II: a few scripts first, they buy for the player afterwards.
+  if (state.era >= 2 && state.buildings.buyScript < 3) {
+    const bought = buyBuilding(state, "buyScript", 1);
+    if (bought !== state) return bought;
+  }
+
+  const savingFor = visibleUpgrades(state).filter((u) => !state.upgrades[u.id] && requirementsMet(state, u.requires)).sort(
     (a, b) => (a.cost.lt(b.cost) ? -1 : a.cost.gt(b.cost) ? 1 : 0),
   )[0];
 
   let best: { id: BuildingId; payback: number } | null = null;
-  for (const def of BUILDINGS) {
+  for (const def of visibleBuildings(state)) {
+    if (def.produces.perSecond.lte(0)) continue; // scripts are handled above
     const q = quote(state, def.id, 1);
     if (q.count === 0 || state.resources[def.costResource].lt(q.cost)) continue;
     if (savingFor && savingFor.costResource === def.costResource) {
@@ -125,15 +159,15 @@ function decide(state: GameState): GameState {
 }
 
 function describeChange(before: GameState, after: GameState): string | null {
-  for (const def of BUILDINGS) {
+  for (const def of ALL_BUILDINGS) {
     if (before.buildings[def.id] === 0 && after.buildings[def.id] > 0) return `Nouveau bâtiment : ${def.name}`;
   }
   // Milestones are novelties too (they double a building's output and carry a fragment).
-  for (const def of BUILDINGS) {
+  for (const def of ALL_BUILDINGS) {
     const crossed = MILESTONES.find((t) => before.buildings[def.id] < t && after.buildings[def.id] >= t);
     if (crossed !== undefined) return `Palier : ${crossed} × ${def.name}`;
   }
-  for (const u of UPGRADES) {
+  for (const u of ALL_UPGRADES) {
     if (!before.upgrades[u.id] && after.upgrades[u.id]) return `Amélioration : ${u.name}`;
   }
   if (before.event.status !== "resolved" && after.event.status === "resolved") {
@@ -172,7 +206,12 @@ function report(label: string, result: SimResult, hours: number): boolean {
   console.log(
     `Toutes les améliorations : ${result.eraDoneMinute === null ? "jamais" : `à ${(result.eraDoneMinute / 60).toFixed(1)} h`}`,
   );
-  console.log(`Argent final : ${result.finalMoney} (+${result.finalRate} / s)`);
+  console.log(
+    `Renaissance (ère II) : ${result.renaissanceMinute === null ? "jamais" : `à ${(result.renaissanceMinute / 60).toFixed(1)} h`}`,
+  );
+  console.log(`Argent final : ${result.finalMoney} (+${result.finalRate} / s), Calcul final : ${result.finalCompute}`);
+  const eraTwo = ALL_BUILDINGS.filter((b) => b.era === 2).map((b) => `${b.name} ${result.buildingsOwned[b.id]}`);
+  console.log(`Bâtiments de l'ère II : ${eraTwo.join(", ")}`);
   console.log("Premiers déblocages :");
   for (const u of unlocks.slice(0, 12)) console.log(`  ${u.minute.toFixed(1).padStart(6)} min  ${u.label}`);
 
@@ -188,13 +227,23 @@ function report(label: string, result: SimResult, hours: number): boolean {
     return true;
   }
   const eraHours = result.eraDoneMinute === null ? Infinity : result.eraDoneMinute / 60;
-  const ok = medianFirstHour >= 2 && medianFirstHour <= 5 && eraHours >= 6 && eraHours <= 10 && maxGap <= 30;
-  console.log(ok ? "→ cibles atteintes" : "→ cibles NON atteintes (rythme 2–5 min, ère I entre 6 et 10 h, écart ≤ 30 min)");
+  const ok =
+    medianFirstHour >= 2 &&
+    medianFirstHour <= 5 &&
+    eraHours >= 6 &&
+    eraHours <= 10 &&
+    maxGap <= 30 &&
+    result.renaissanceMinute !== null;
+  console.log(
+    ok
+      ? "→ cibles atteintes"
+      : "→ cibles NON atteintes (rythme 2–5 min, ère I entre 6 et 10 h, écart ≤ 30 min, ère II atteinte)",
+  );
   return ok;
 }
 
 function main() {
-  const hours = Number(process.env.SIM_HOURS ?? 8);
+  const hours = Number(process.env.SIM_HOURS ?? 12);
   const active = simulate({ hours, clicksPerSecond: 1 });
   const idle = simulate({ hours, clicksPerSecond: 0 });
   const ok = report("actif, 1 clic/s", active, hours);

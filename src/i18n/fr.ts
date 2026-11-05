@@ -3,6 +3,15 @@ export const fr = {
   title: "THE LAST HUMAN",
   era: "Ère I · The Digital Age",
   years: "1990–2005",
+  eras: {
+    1: { name: "Ère I · The Digital Age", years: "1990–2005" },
+    2: { name: "Ère II · The Automation Age", years: "2005–2020" },
+  },
+  scripts: {
+    label: "Cible des scripts d'achat",
+    none: "Aucune",
+    hint: "Chaque script achète la cible dès qu'elle est abordable.",
+  },
   notice: "Notice",
   tabs: { produce: "Produire", buy: "Acheter", upgrade: "Améliorer", archives: "Archives" },
   windows: {
@@ -14,6 +23,7 @@ export const fr = {
   resources: {
     money: "Argent",
     data: "Données",
+    compute: "Calcul",
     perSecond: "par seconde",
     totalMoney: "Gains au total",
   },

@@ -6,6 +6,7 @@ import {
   clickManual,
   createInitialState,
   renaissance,
+  setScriptTarget,
   resolveEvent,
   tick,
   type BuyMode,
@@ -95,6 +96,8 @@ export class GameStore {
   renaissance = (): void => this.update((s) => renaissance(s));
 
   buyKnowledge = (id: string): void => this.update((s) => buyKnowledgeBonus(s, id));
+
+  setScriptTarget = (id: BuildingId | null): void => this.update((s) => setScriptTarget(s, id));
 
   /** Writes the current state to localStorage. Never overwrites a save it cannot read. */
   save = (): void => {

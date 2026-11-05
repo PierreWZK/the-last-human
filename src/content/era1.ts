@@ -86,7 +86,7 @@ export const BUILDINGS: BuildingDef[] = RAW_BUILDINGS.map((b) => ({
 
 const none = { kind: "none" as const };
 
-const RAW_UPGRADES: UpgradeDef[] = [
+const RAW_UPGRADES: Omit<UpgradeDef, "era">[] = [
   // Travail manuel
   { id: "keyboard", name: "Clavier ergonomique", description: "Dix doigts, moins de fatigue : le travail manuel rapporte deux fois plus.", cost: D(50), costResource: "money", target: { kind: "manual" }, factor: 2, requires: none },
   { id: "mouse", name: "Souris optique", description: "Le clic devient deux fois plus précis, donc deux fois plus rentable.", cost: D(200), costResource: "money", target: { kind: "manual" }, factor: 2, requires: none },
@@ -130,6 +130,7 @@ const RAW_UPGRADES: UpgradeDef[] = [
 
 export const UPGRADES: UpgradeDef[] = RAW_UPGRADES.map((u) => ({
   ...u,
+  era: 1 as const,
   cost: u.cost.mul(TUNING.upgradeCostScale),
   requires:
     u.requires.kind === "totalMoney"

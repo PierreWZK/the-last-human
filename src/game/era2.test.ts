@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { D } from "./decimal";
-import { canRenaissance, createInitialState, renaissance, setScriptTarget, tick } from "./engine";
+import {
+  buyBuilding,
+  canBuyUpgrade,
+  canRenaissance,
+  createInitialState,
+  productionPerSecond,
+  renaissance,
+  setScriptTarget,
+  tick,
+  visibleBuildings,
+  visibleUpgrades,
+} from "./engine";
 import { deserialize, serialize } from "./save";
 import type { GameState } from "./types";
 
@@ -104,5 +115,31 @@ describe("sauvegarde v4", () => {
     const env = JSON.parse(serialize(createInitialState()));
     env.state.scriptTarget = "invented";
     expect(deserialize(JSON.stringify(env)).ok).toBe(false);
+  });
+});
+
+describe("ère II : visibilité et améliorations", () => {
+  it("les bâtiments et améliorations de l'ère II n'apparaissent qu'en ère II", () => {
+    const one = createInitialState();
+    expect(visibleBuildings(one).some((b) => b.era === 2)).toBe(false);
+    expect(visibleUpgrades(one).some((u) => u.era === 2)).toBe(false);
+    expect(visibleBuildings(eraTwo()).some((b) => b.id === "datacenter")).toBe(true);
+    expect(visibleUpgrades(eraTwo()).some((u) => u.id === "memoryCache")).toBe(true);
+  });
+
+  it("en ère I, on ne peut pas acheter un bâtiment ni une amélioration de l'ère II", () => {
+    const s = { ...createInitialState(), resources: { money: D(1e9), data: D(1e9), compute: D(1e9) } };
+    expect(buyBuilding(s, "database", 1)).toBe(s);
+    const owning = { ...s, buildings: { ...s.buildings, database: 10 } };
+    expect(canBuyUpgrade(owning, "memoryCache")).toBe(false);
+    expect(canBuyUpgrade({ ...owning, era: 2 }, "memoryCache")).toBe(true);
+  });
+
+  it("Mémoire cache double le calcul des bases de données", () => {
+    const base = eraTwo();
+    const s = { ...base, buildings: { ...base.buildings, database: 10 } };
+    const cached = { ...s, upgrades: { memoryCache: true as const } };
+    const ratio = productionPerSecond(cached).compute.toNumber() / productionPerSecond(s).compute.toNumber();
+    expect(ratio).toBeCloseTo(2, 6);
   });
 });

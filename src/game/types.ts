@@ -40,6 +40,8 @@ export interface UpgradeDef {
   target: UpgradeTarget;
   factor: number;
   requires: UpgradeRequirement;
+  /** The era that introduces the upgrade. */
+  era: 1 | 2;
 }
 
 export type UpgradeRequirement =

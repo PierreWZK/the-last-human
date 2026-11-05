@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { BUILDINGS, UPGRADES } from "@/content/era1";
 import { ACHIEVEMENTS, ARCHIVES } from "@/content/events1";
 import { KNOWLEDGE_BONUSES } from "@/content/knowledge";
 import {
@@ -20,6 +19,8 @@ import {
   quote,
   requirementMet,
   synergyBonus,
+  visibleBuildings,
+  visibleUpgrades,
   type BuyMode,
 } from "@/game/engine";
 import { formatNumber } from "@/game/decimal";
@@ -47,11 +48,11 @@ export function GameScreen() {
   const rates = productionPerSecond(state);
 
   return (
-    <main className={styles.screen} data-era="1">
+    <main className={styles.screen} data-era={state.era}>
       <header className={styles.header}>
         <h1 className={styles.title}>{fr.title}</h1>
         <p className={styles.era}>
-          {fr.era} <span className={styles.years}>{fr.years}</span>
+          {fr.eras[state.era].name} <span className={styles.years}>{fr.eras[state.era].years}</span>
         </p>
       </header>
 
@@ -91,6 +92,13 @@ export function GameScreen() {
               <dd className={styles.big}>{formatNumber(state.resources.data)}</dd>
               <dd className={styles.rate}>+{formatNumber(rates.data)} {fr.resources.perSecond}</dd>
             </div>
+            {state.era >= 2 && (
+              <div>
+                <dt>{fr.resources.compute}</dt>
+                <dd className={styles.big}>{formatNumber(state.resources.compute)}</dd>
+                <dd className={styles.rate}>+{formatNumber(rates.compute)} {fr.resources.perSecond}</dd>
+              </div>
+            )}
           </dl>
           <p className={styles.muted}>
             {fr.resources.totalMoney} : {formatNumber(state.totalMoney)}
@@ -111,8 +119,31 @@ export function GameScreen() {
 
         <section className={`${styles.window} ${tab === "buy" ? styles.active : ""}`} aria-labelledby="w-buy">
           <h2 id="w-buy" className={styles.windowTitle}>{fr.windows.buildings}</h2>
+          {state.era >= 2 && (
+            <div className={styles.item}>
+              <label className={styles.itemName} htmlFor="script-target">
+                {fr.scripts.label}
+              </label>
+              <select
+                id="script-target"
+                className={styles.button}
+                value={state.scriptTarget ?? ""}
+                onChange={(e) => store.setScriptTarget(e.target.value === "" ? null : (e.target.value as BuildingId))}
+              >
+                <option value="">{fr.scripts.none}</option>
+                {visibleBuildings(state)
+                  .filter((b) => b.id !== "buyScript")
+                  .map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+              </select>
+              <p className={styles.muted}>{fr.scripts.hint}</p>
+            </div>
+          )}
           <ul className={styles.list}>
-            {BUILDINGS.map((def) => (
+            {visibleBuildings(state).map((def) => (
               <BuildingRow key={def.id} def={def} state={state} onBuy={store.buy} />
             ))}
           </ul>
@@ -163,13 +194,13 @@ function BuildingRow({
         </span>
       </div>
       <p className={styles.itemText}>{def.description}</p>
-      <p className={styles.muted}>
+      {def.produces.perSecond.gt(0) && <p className={styles.muted}>
         {t(fr.buildings.perUnit, {
           amount: formatNumber(
             def.produces.perSecond.mul(multiplier(state, def.id) * synergyBonus(state, def.id) * milestoneMultiplier(owned)),
           ),
         })}
-      </p>
+      </p>}
       <p className={styles.muted}>
         {nextMilestone(owned) === null
           ? fr.buildings.lastMilestone
@@ -199,7 +230,7 @@ function BuildingRow({
 }
 
 function UpgradeList({ state, onBuy }: { state: GameState; onBuy: (id: string) => void }) {
-  const remaining = UPGRADES.filter((u) => !state.upgrades[u.id]);
+  const remaining = visibleUpgrades(state).filter((u) => !state.upgrades[u.id]);
   if (remaining.length === 0) return <p className={styles.muted}>{fr.upgrades.empty}</p>;
   return (
     <ul className={styles.list}>
@@ -224,7 +255,7 @@ function UpgradeRow({ def, state, onBuy }: { def: UpgradeDef; state: GameState; 
       <div className={styles.buyRow}>
         <button type="button" className={styles.button} disabled={!affordable} onClick={() => onBuy(def.id)}>
           {fr.upgrades.buy} · {formatNumber(def.cost)}
-          {def.costResource === "data" ? " données" : ""}
+          {def.costResource === "data" ? " données" : def.costResource === "compute" ? " Calcul" : ""}
         </button>
       </div>
     </li>

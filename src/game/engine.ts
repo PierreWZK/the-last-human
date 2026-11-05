@@ -1,6 +1,6 @@
 import type Decimal from "break_infinity.js";
 import { BUILDINGS, MILESTONES, UPGRADES } from "@/content/era1";
-import { BUILDINGS_ERA2 } from "@/content/era2";
+import { BUILDINGS_ERA2, UPGRADES_ERA2 } from "@/content/era2";
 import {
   ACHIEVEMENTS,
   ARCHIVES,
@@ -36,8 +36,20 @@ export type BuyMode = 1 | 10 | 100 | "max";
 /** Every building of every era. Eras only decide which ones the player can see. */
 export const ALL_BUILDINGS = [...BUILDINGS, ...BUILDINGS_ERA2];
 
+export const ALL_UPGRADES = [...UPGRADES, ...UPGRADES_ERA2];
+
 const BUILDING_BY_ID = new Map(ALL_BUILDINGS.map((b) => [b.id, b]));
-const UPGRADE_BY_ID = new Map(UPGRADES.map((u) => [u.id, u]));
+const UPGRADE_BY_ID = new Map(ALL_UPGRADES.map((u) => [u.id, u]));
+
+/** Buildings the player can see and buy in the current era. */
+export function visibleBuildings(state: GameState) {
+  return ALL_BUILDINGS.filter((b) => b.era <= state.era);
+}
+
+/** Upgrades the player can see and buy in the current era. */
+export function visibleUpgrades(state: GameState) {
+  return ALL_UPGRADES.filter((u) => u.era <= state.era);
+}
 const EVENT_BY_ID = new Map([...EVENTS, ...RANDOM_EVENTS].map((e) => [e.id, e]));
 
 /** `seed` is only used for the random events; the game passes a fresh one per new game. */
@@ -82,7 +94,7 @@ export function getEvent(id: string): EventDef | undefined {
 /** Multiplier applied to a target (manual work or one building), from owned upgrades. */
 export function multiplier(state: GameState, target: "manual" | BuildingId): number {
   let m = 1;
-  for (const u of UPGRADES) {
+  for (const u of ALL_UPGRADES) {
     if (!state.upgrades[u.id]) continue;
     if (targetMatches(u.target, target)) m *= u.factor;
   }
@@ -99,7 +111,7 @@ function targetMatches(upgradeTarget: UpgradeTarget, target: "manual" | Building
 /** Bonus from synergies: 1 + Σ perUnit × owned source, for upgrades owned by the player. */
 export function synergyBonus(state: GameState, building: BuildingId): number {
   let bonus = 1;
-  for (const u of UPGRADES) {
+  for (const u of ALL_UPGRADES) {
     if (!state.upgrades[u.id] || u.target.kind !== "synergy") continue;
     if (u.target.building !== building) continue;
     bonus += u.target.perUnit * state.buildings[u.target.source];
@@ -272,7 +284,7 @@ export function quote(state: GameState, id: BuildingId, mode: BuyMode) {
 export function buyBuilding(state: GameState, id: BuildingId, mode: BuyMode): GameState {
   const def = getBuilding(id);
   const { count, cost } = quote(state, id, mode);
-  if (count <= 0) return state;
+  if (count <= 0 || def.era > state.era) return state;
   const money = state.resources[def.costResource];
   if (money.lt(cost)) return state;
   return refreshUnlocks({
@@ -284,7 +296,7 @@ export function buyBuilding(state: GameState, id: BuildingId, mode: BuyMode): Ga
 
 export function canBuyUpgrade(state: GameState, id: string): boolean {
   const def = getUpgrade(id);
-  if (!def || state.upgrades[id]) return false;
+  if (!def || state.upgrades[id] || def.era > state.era) return false;
   return requirementMet(state, def.requires) && state.resources[def.costResource].gte(def.cost);
 }
 
