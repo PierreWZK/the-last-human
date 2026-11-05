@@ -154,10 +154,10 @@ Effets :
 
 1. **Progression** : chaque renaissance exige un seuil maximal de Human Dependency (75 %, 40 %, 5 %, 0 %).
 2. **Gameplay** : la puissance du travail manuel suit la Human Dependency. Plus le monde s'automatise, moins le clic compte et plus le joueur doit penser en systèmes.
-3. **Narration** : fragments et Human Archives se débloquent par paliers (90 %, 75 %, 50 %, 25 %, 10 %, 1 %, 0 %).
+3. **Narration** : fragments et Human Archives se débloquent par paliers de Human Dependency (90 %, 75 %, 50 %, 25 %, 10 %). Implémenté en phase 3 : cinq paliers, plus le fragment « 1900, une nuit sans incident » débloqué par l'an 2000. Les paliers 1 % et 0 % restent à décider.
 4. **Interface** : moins il y a de travail humain, plus l'interface s'épure.
 
-Une jauge permanente affiche « Humain X % / Machines Y % ». Détails à affiner en phase 3.
+Une jauge permanente affiche « Part du travail encore faite par des humains : X % ». Formule retenue en phase 3 : chaque bâtiment pèse (nombre possédé × production de base), et sa part humaine vaut 100, 80, 60, 40, 15 ou 2 % selon le bâtiment. Sans bâtiment, la valeur est 100 %. Le travail manuel est toujours entièrement humain et n'entre pas dans la formule.
 
 ### 5.8 Human Archives
 

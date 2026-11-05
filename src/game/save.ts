@@ -1,4 +1,5 @@
 import { BUILDINGS, UPGRADES } from "@/content/era1";
+import { ACHIEVEMENTS, ARCHIVES, EVENTS, EVENT_GAP_MS, RANDOM_EVENTS } from "@/content/events1";
 import { D } from "./decimal";
 import { createInitialState } from "./engine";
 import { SCHEMA_VERSION, type BuildingId, type GameState } from "./types";
@@ -17,10 +18,16 @@ interface SerializedState {
   elapsedMs: number;
   resources: { money: string; data: string };
   totalMoney: string;
+  totalClicks: number;
   buildings: Record<string, number>;
   upgrades: Record<string, true>;
   event: GameState["event"];
+  eventsResolved: number;
   effects: GameState["effects"];
+  rngSeed: number;
+  nextEventAtMs: number;
+  archives: Record<string, true>;
+  achievements: Record<string, true>;
 }
 
 interface Envelope {
@@ -44,10 +51,16 @@ export function serialize(state: GameState, now: Date = new Date()): string {
       elapsedMs: state.elapsedMs,
       resources: { money: state.resources.money.toString(), data: state.resources.data.toString() },
       totalMoney: state.totalMoney.toString(),
+      totalClicks: state.totalClicks,
       buildings: { ...state.buildings },
       upgrades: { ...state.upgrades },
       event: state.event,
+      eventsResolved: state.eventsResolved,
       effects: state.effects,
+      rngSeed: state.rngSeed,
+      nextEventAtMs: state.nextEventAtMs,
+      archives: { ...state.archives },
+      achievements: { ...state.achievements },
     },
   };
   return JSON.stringify(envelope);
@@ -72,8 +85,32 @@ export function deserialize(raw: string): LoadResult {
   return migrate(parsed.state, version);
 }
 
-/** Migrations: one step per version, applied in order. V1 is the first version. */
-const MIGRATIONS: Array<(raw: Record<string, unknown>) => Record<string, unknown>> = [];
+/**
+ * Migrations: one step per version, applied in order. Step n turns a version-n state into
+ * version n+1. Keep old steps forever: a player may come back after months.
+ */
+const MIGRATIONS: Array<(raw: Record<string, unknown>) => Record<string, unknown>> = [
+  // v1 -> v2: scripted event gets its id; random events, archives, achievements appear.
+  (raw) => {
+    const event = raw.event;
+    let migratedEvent: Record<string, unknown> = { status: "pending" };
+    if (isRecord(event) && event.status === "open") migratedEvent = { status: "open", id: "y2k" };
+    if (isRecord(event) && event.status === "resolved") {
+      migratedEvent = { status: "resolved", id: "y2k", choice: event.choice };
+    }
+    const elapsed = typeof raw.elapsedMs === "number" ? raw.elapsedMs : 0;
+    return {
+      ...raw,
+      event: migratedEvent,
+      totalClicks: 0,
+      eventsResolved: migratedEvent.status === "resolved" ? 1 : 0,
+      rngSeed: 1,
+      nextEventAtMs: elapsed + EVENT_GAP_MS.min,
+      archives: {},
+      achievements: {},
+    };
+  },
+];
 
 function migrate(raw: Record<string, unknown>, fromVersion: number): LoadResult {
   let current = raw;
@@ -85,6 +122,10 @@ function migrate(raw: Record<string, unknown>, fromVersion: number): LoadResult 
   return validate(current);
 }
 
+const EVENT_IDS = new Set([...EVENTS, ...RANDOM_EVENTS].map((e) => e.id));
+const ARCHIVE_IDS = new Set(ARCHIVES.map((a) => a.id));
+const ACHIEVEMENT_IDS = new Set(ACHIEVEMENTS.map((a) => a.id));
+
 function validate(raw: Record<string, unknown>): LoadResult {
   const { elapsedMs, resources, totalMoney, buildings, upgrades, event, effects } = raw;
 
@@ -95,6 +136,12 @@ function validate(raw: Record<string, unknown>): LoadResult {
   if (!money || !data) return bad("Quantité de ressource invalide");
   const totalMoneyValue = parseDecimal(totalMoney);
   if (!totalMoneyValue) return bad("Total d'argent invalide");
+  if (!isNonNegativeFinite(raw.totalClicks) || !Number.isSafeInteger(raw.totalClicks)) return bad("Clics invalides");
+  if (!isNonNegativeFinite(raw.eventsResolved) || !Number.isSafeInteger(raw.eventsResolved)) {
+    return bad("Compteur d'événements invalide");
+  }
+  if (!Number.isSafeInteger(raw.rngSeed)) return bad("Graine invalide");
+  if (!isNonNegativeFinite(raw.nextEventAtMs)) return bad("Date du prochain événement invalide");
 
   if (!isRecord(buildings)) return bad("Bâtiments invalides");
   const buildingIds = new Set<string>(BUILDINGS.map((b) => b.id));
@@ -123,13 +170,22 @@ function validate(raw: Record<string, unknown>): LoadResult {
   if (!isRecord(event) || !["pending", "open", "resolved"].includes(event.status as string)) {
     return bad("Événement invalide");
   }
-  if (event.status === "resolved" && event.choice !== "patch" && event.choice !== "ignore") {
-    return bad("Choix d'événement invalide");
+  if (event.status !== "pending" && !EVENT_IDS.has(event.id as string)) return bad("Événement inconnu");
+  if (event.status === "resolved" && typeof event.choice !== "string") return bad("Choix d'événement invalide");
+
+  if (!isRecord(raw.archives)) return bad("Archives invalides");
+  for (const [key, value] of Object.entries(raw.archives)) {
+    if (!ARCHIVE_IDS.has(key) || value !== true) return bad(`Archive inconnue : ${key}`);
+  }
+  if (!isRecord(raw.achievements)) return bad("Succès invalides");
+  for (const [key, value] of Object.entries(raw.achievements)) {
+    if (!ACHIEVEMENT_IDS.has(key) || value !== true) return bad(`Succès inconnu : ${key}`);
   }
 
   if (!Array.isArray(effects)) return bad("Effets invalides");
   for (const e of effects) {
-    if (!isRecord(e) || e.kind !== "slowdown" || typeof e.factor !== "number" || e.factor <= 0 || e.factor > 1) {
+    const kindOk = isRecord(e) && (e.kind === "slowdown" || e.kind === "boost");
+    if (!kindOk || typeof e.factor !== "number" || e.factor <= 0 || e.factor > 4) {
       return bad("Effet invalide");
     }
     if (!isNonNegativeFinite(e.untilMs)) return bad("Durée d'effet invalide");
@@ -141,10 +197,16 @@ function validate(raw: Record<string, unknown>): LoadResult {
     elapsedMs: elapsedMs as number,
     resources: { money, data },
     totalMoney: totalMoneyValue,
+    totalClicks: raw.totalClicks as number,
     buildings: parsedBuildings,
     upgrades: parsedUpgrades,
     event: event as GameState["event"],
+    eventsResolved: raw.eventsResolved as number,
     effects: effects as GameState["effects"],
+    rngSeed: raw.rngSeed as number,
+    nextEventAtMs: raw.nextEventAtMs as number,
+    archives: raw.archives as Record<string, true>,
+    achievements: raw.achievements as Record<string, true>,
   };
   return { ok: true, state };
 }

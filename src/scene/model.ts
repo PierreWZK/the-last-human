@@ -49,7 +49,7 @@ export function sceneModel(state: GameState): SceneModel {
     shown,
     tiers,
     automated: ids.some((id) => state.buildings[id] > 0),
-    y2kOpen: state.event.status === "open",
+    y2kOpen: state.event.status === "open" && state.event.id === "y2k",
     slowed: state.effects.length > 0,
   };
 }
