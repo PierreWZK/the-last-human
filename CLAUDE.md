@@ -13,6 +13,12 @@
 - [x] Tests E2E des phases 1 à 4 ter : 40 verts sur 4 largeurs
 - [x] README et CAHIER-DES-CHARGES mis à jour pour la phase 5, `.env.example` ajouté
 
+### Session du 2026-11-05 (J22 #2) — branches empilées, rien de poussé
+- `feat/user-auth` (phase 5, commit 0d85209) → `feat/offline-progress` (phase 6) → `feat/mobile-ui` (phase 7) → `feat/visual-polish` (phase 8) → `feat/final-ending` (phase 9, **vide**, pas commencée).
+- Fichiers parasites exclus via `.git/info/exclude` (non supprimés).
+- Tests : seul `src/game/offline.test.ts` a été lancé (8 verts). Vitest complet, simulateur, lint et Playwright **pas lancés**.
+- Phase 9 prévue : types `Era` 5 et ressource `control`, `SCHEMA_VERSION` 7 (aiCores, policies, directives, endedAtMs, eraStartedMs, runId, journal), `src/content/era5.ts` (renaissance IV : toutes les améliorations IV + 1e6 robots, AI Cores = floor(√gains/1000) ; 4 politiques ; 6 directives en Contrôle ; fin à 7e9 robots + automatisation 100 %), écran final + « Nouvelle humanité » (garde les archives), table Prisma `Run` + `User.hideFromLeaderboard` (migration 0002), routes `/api/leaderboard` et `/api/profile`, simulateur jusqu'à la fin, durée minimale anti-triche = 50 % du simulateur.
+
 ### Reste à faire (phase 5)
 - [ ] **Tests E2E de compte** : `tests/e2e/account.spec.ts`. Le test « second appareil » échoue (5 échecs sur 4 largeurs). Cause probable : PGlite ne gère qu'une connexion à la fois. `scripts/e2e-server.mjs` et `package.json` (`db:dev`) passent à `maxConnections: 1` : **à relancer pour vérifier**.
 - [ ] **Commit et PR** : rien n'est commité. La branche `feat/user-auth` existe localement. Le commit a été interrompu.
