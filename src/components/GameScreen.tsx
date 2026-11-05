@@ -18,10 +18,11 @@ import { getStore, type StoreSnapshot } from "@/game/store";
 import type { BuildingDef, BuildingId, GameState, UpgradeDef } from "@/game/types";
 import { fr, t } from "@/i18n/fr";
 import styles from "./GameScreen.module.css";
+import { Scene } from "./Scene";
 
 type Tab = "produce" | "buy" | "upgrade";
 
-const SERVER_SNAPSHOT: StoreSnapshot = { state: createInitialState(), notice: null };
+const SERVER_SNAPSHOT: StoreSnapshot = { state: createInitialState(), notice: null, clicks: 0 };
 
 export function GameScreen() {
   const store = getStore();
@@ -63,6 +64,8 @@ export function GameScreen() {
           </button>
         ))}
       </nav>
+
+      <Scene className={tab === "produce" ? "" : styles.offTab} />
 
       <div className={styles.grid}>
         <section className={`${styles.window} ${tab === "produce" ? styles.active : ""}`} aria-labelledby="w-res">

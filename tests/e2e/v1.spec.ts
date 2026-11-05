@@ -65,6 +65,30 @@ test("une sauvegarde illisible est gardée, pas écrasée", async ({ page }) => 
   expect(backup).toBe(corrupt);
 });
 
+test("la scène s'affiche sans erreur et la toucher tape du code", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await openFresh(page);
+  const scene = page.getByRole("img", { name: /Votre bureau en 1990/ });
+  await expect(scene).toBeVisible();
+  await scene.click();
+  await expect(page.getByText("Gains au total : 1,0")).toBeVisible();
+  await page.waitForTimeout(500);
+  expect(errors).toEqual([]);
+});
+
+test("avec le mouvement réduit, la scène reste une image fixe sans erreur", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await openFresh(page);
+  const scene = page.getByRole("img", { name: /Votre bureau en 1990/ });
+  await expect(scene).toBeVisible();
+  await scene.click();
+  await expect(page.getByText("Gains au total : 1,0")).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test("l'achat maximum ne rend jamais l'argent négatif", async ({ page }) => {
   await openFresh(page);
   for (let i = 0; i < 60; i++) await page.getByRole("button", { name: "Taper du code" }).click();

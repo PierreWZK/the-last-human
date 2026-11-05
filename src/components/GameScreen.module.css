@@ -236,6 +236,10 @@
     display: none;
   }
 
+  .offTab {
+    display: none;
+  }
+
   .window.active {
     display: grid;
   }
