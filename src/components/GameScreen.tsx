@@ -3,9 +3,14 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { ACHIEVEMENTS, ARCHIVES } from "@/content/events1";
 import { KNOWLEDGE_BONUSES } from "@/content/knowledge";
+import { ALGORITHMS } from "@/content/algorithms";
+import { TRAINING } from "@/content/era3";
 import {
   canBuyUpgrade,
+  algorithmPointGain,
+  algorithmSlots,
   canRenaissance,
+  canRenaissance2,
   knowledgeGain,
   getEvent,
   humanDependency,
@@ -23,7 +28,7 @@ import {
   visibleUpgrades,
   type BuyMode,
 } from "@/game/engine";
-import { formatNumber } from "@/game/decimal";
+import { D, formatNumber } from "@/game/decimal";
 import { getStore, type StoreSnapshot } from "@/game/store";
 import type { BuildingDef, BuildingId, EventEffect, GameState, UpgradeDef } from "@/game/types";
 import { fr, t } from "@/i18n/fr";
@@ -92,6 +97,13 @@ export function GameScreen() {
               <dd className={styles.big}>{formatNumber(state.resources.data)}</dd>
               <dd className={styles.rate}>+{formatNumber(rates.data)} {fr.resources.perSecond}</dd>
             </div>
+            {state.era >= 3 && (
+              <div>
+                <dt>{fr.resources.intelligence}</dt>
+                <dd className={styles.big}>{formatNumber(state.resources.intelligence)}</dd>
+                <dd className={styles.rate}>+{formatNumber(rates.intelligence)} {fr.resources.perSecond}</dd>
+              </div>
+            )}
             {state.era >= 2 && (
               <div>
                 <dt>{fr.resources.compute}</dt>
@@ -154,6 +166,9 @@ export function GameScreen() {
           <UpgradeList state={state} onBuy={store.upgrade} />
           <RenaissancePanel state={state} onRenaissance={store.renaissance} />
           <KnowledgeTree state={state} onBuy={store.buyKnowledge} />
+          <Renaissance2Panel state={state} onRenaissance={store.renaissance2} />
+          <AlgorithmsPanel state={state} store={store} />
+          <TrainingPanel state={state} onStart={store.startTraining} />
         </section>
 
         <section className={`${styles.window} ${tab === "archives" ? styles.active : ""}`} aria-labelledby="w-arch">
@@ -330,6 +345,118 @@ function KnowledgeTree({ state, onBuy }: { state: GameState; onBuy: (id: string)
           );
         })}
       </ul>
+    </div>
+  );
+}
+
+function Renaissance2Panel({ state, onRenaissance }: { state: GameState; onRenaissance: () => void }) {
+  const [preparing, setPreparing] = useState(false);
+  if (state.era !== 2) return null;
+  if (!canRenaissance2(state)) return <p className={styles.muted}>{fr.renaissance2.locked}</p>;
+  return (
+    <div className={styles.event}>
+      <h2 className={styles.windowTitle}>{fr.renaissance2.title}</h2>
+      {!preparing ? (
+        <div className={styles.buyRow}>
+          <button type="button" className={styles.button} onClick={() => setPreparing(true)}>
+            {fr.renaissance.start}
+          </button>
+        </div>
+      ) : (
+        <>
+          <h3 className={styles.itemName}>{fr.renaissance.explainTitle}</h3>
+          <p className={styles.itemText}>{fr.renaissance2.lose}</p>
+          <p className={styles.itemText}>{fr.renaissance2.keep}</p>
+          <p className={styles.itemText}>{t(fr.renaissance2.gain, { points: algorithmPointGain(state) })}</p>
+          <div className={styles.buyRow}>
+            <button type="button" className={styles.button} onClick={onRenaissance}>
+              {fr.renaissance.confirm}
+            </button>
+            <button type="button" className={styles.button} onClick={() => setPreparing(false)}>
+              {fr.renaissance.cancel}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function AlgorithmsPanel({ state, store }: { state: GameState; store: ReturnType<typeof getStore> }) {
+  if (state.era < 2) return null;
+  const used = state.equippedAlgorithms.length;
+  const slots = algorithmSlots(state);
+  return (
+    <div className={styles.event}>
+      <h2 className={styles.windowTitle}>{fr.algorithms.title}</h2>
+      <p className={styles.muted}>{t(fr.algorithms.points, { points: state.algorithmPoints })}</p>
+      <p className={styles.muted}>{t(fr.algorithms.slots, { used, total: slots })}</p>
+      <ul className={styles.list}>
+        {ALGORITHMS.map((a) => {
+          const owned = Boolean(state.algorithms[a.id]);
+          const equipped = state.equippedAlgorithms.includes(a.id);
+          return (
+            <li key={a.id} className={styles.item}>
+              <div className={styles.itemHead}>
+                <span className={styles.itemName}>{a.name}</span>
+                <span className={styles.muted}>{t(fr.algorithms.cost, { cost: a.cost })}</span>
+              </div>
+              <p className={styles.itemText}>{a.description}</p>
+              <div className={styles.buyRow}>
+                {!owned && (
+                  <button
+                    type="button"
+                    className={styles.button}
+                    disabled={state.algorithmPoints < a.cost}
+                    onClick={() => store.buyAlgorithm(a.id)}
+                  >
+                    {fr.algorithms.buy}
+                  </button>
+                )}
+                {owned && !equipped && (
+                  <button
+                    type="button"
+                    className={styles.button}
+                    disabled={used >= slots}
+                    onClick={() => store.equipAlgorithm(a.id)}
+                  >
+                    {fr.algorithms.equip}
+                  </button>
+                )}
+                {equipped && (
+                  <button type="button" className={styles.button} onClick={() => store.unequipAlgorithm(a.id)}>
+                    {fr.algorithms.unequip}
+                  </button>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function TrainingPanel({ state, onStart }: { state: GameState; onStart: () => void }) {
+  if (state.era !== 3) return null;
+  const affordable = state.resources.data.gte(TRAINING.dataCost) && state.resources.compute.gte(TRAINING.computeCost);
+  return (
+    <div className={styles.event}>
+      <h2 className={styles.windowTitle}>{fr.training.title}</h2>
+      <p className={styles.muted}>{t(fr.training.models, { count: state.models.length })}</p>
+      <p className={styles.muted}>
+        {t(fr.training.cost, { data: TRAINING.dataCost, compute: formatNumber(D(TRAINING.computeCost)) })}
+      </p>
+      <div className={styles.buyRow}>
+        <button
+          type="button"
+          className={styles.button}
+          disabled={Boolean(state.training) || !affordable}
+          onClick={onStart}
+        >
+          {state.training ? fr.training.running : fr.training.start}
+        </button>
+      </div>
     </div>
   );
 }
