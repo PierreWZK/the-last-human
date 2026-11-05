@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent, type PointerEvent } from "react";
 import { ACHIEVEMENTS, ARCHIVES } from "@/content/events1";
 import { KNOWLEDGE_BONUSES } from "@/content/knowledge";
 import { ALGORITHMS } from "@/content/algorithms";
@@ -47,6 +47,30 @@ import { AccountPanel, CloudBanner } from "./AccountPanel";
 
 type Tab = "produce" | "buy" | "upgrade" | "archives" | "account";
 
+const TABS: Tab[] = ["produce", "buy", "upgrade", "archives", "account"];
+/** A horizontal swipe longer than this (and mostly horizontal) changes tab on touch screens. */
+const SWIPE_PX = 60;
+
+/** Swipe left or right between tabs (mobile). Mouse and pen are ignored: they click. */
+function useSwipe(tab: Tab, setTab: (t: Tab) => void) {
+  const start = useRef<{ x: number; y: number } | null>(null);
+  return {
+    onPointerDown: (e: PointerEvent) => {
+      start.current = e.pointerType === "touch" ? { x: e.clientX, y: e.clientY } : null;
+    },
+    onPointerUp: (e: PointerEvent) => {
+      const from = start.current;
+      start.current = null;
+      if (!from) return;
+      const dx = e.clientX - from.x;
+      const dy = e.clientY - from.y;
+      if (Math.abs(dx) < SWIPE_PX || Math.abs(dx) < 2 * Math.abs(dy)) return;
+      const i = TABS.indexOf(tab) + (dx < 0 ? 1 : -1);
+      if (i >= 0 && i < TABS.length) setTab(TABS[i]);
+    },
+  };
+}
+
 const SERVER_SNAPSHOT: StoreSnapshot = { state: createInitialState(), notice: null, clicks: 0, readOnly: false, offline: null };
 
 export function GameScreen() {
@@ -60,6 +84,10 @@ export function GameScreen() {
   }, [store]);
 
   const rates = productionPerSecond(state);
+  const swipe = useSwipe(tab, setTab);
+  const pinned = (["money", "data", "compute", "intelligence", "robots"] as const).filter(
+    (r) => r === "money" || r === "data" || (r === "compute" && state.era >= 2) || (r === "intelligence" && state.era >= 3) || (r === "robots" && state.era >= 4),
+  );
 
   return (
     <main className={styles.screen} data-era={state.era}>
@@ -80,8 +108,14 @@ export function GameScreen() {
 
       {offline && <OfflineRecap report={offline} onClose={store.dismissOffline} />}
 
+      <p className={styles.pinned} aria-hidden="true">
+        {pinned.map((r) => (
+          <span key={r}>{`${fr.resources[r]} ${formatNumber(state.resources[r])}`}</span>
+        ))}
+      </p>
+
       <nav className={styles.tabs} aria-label="Sections">
-        {(["produce", "buy", "upgrade", "archives", "account"] as const).map((key) => (
+        {TABS.map((key) => (
           <button
             key={key}
             type="button"
@@ -96,7 +130,7 @@ export function GameScreen() {
 
       <Scene className={tab === "produce" ? "" : styles.offTab} />
 
-      <div className={styles.grid}>
+      <div className={styles.grid} data-tab={tab} {...swipe}>
         <section className={`${styles.window} ${tab === "produce" ? styles.active : ""}`} aria-labelledby="w-res">
           <h2 id="w-res" className={styles.windowTitle}>{fr.windows.resources}</h2>
           <dl className={styles.resources}>
@@ -150,7 +184,7 @@ export function GameScreen() {
           <EventWindow state={state} onAnswer={store.answerEvent} />
         </section>
 
-        <section className={`${styles.window} ${tab === "buy" ? styles.active : ""}`} aria-labelledby="w-buy">
+        <section className={`${styles.window} ${styles.buyWindow} ${tab === "buy" ? styles.active : ""}`} aria-labelledby="w-buy">
           <h2 id="w-buy" className={styles.windowTitle}>{fr.windows.buildings}</h2>
           {state.era >= 2 && (
             <div className={styles.item}>
@@ -175,6 +209,7 @@ export function GameScreen() {
               <p className={styles.muted}>{fr.scripts.hint}</p>
             </div>
           )}
+          <p className={`${styles.muted} ${styles.desktopOnly}`}>{fr.buildings.shortcuts}</p>
           <ul className={styles.list}>
             {visibleBuildings(state).map((def) => (
               <BuildingRow key={def.id} def={def} state={state} onBuy={store.buy} />
@@ -275,8 +310,15 @@ function BuildingRow({
     { label: fr.buildings.buy10, mode: 10 },
     { label: fr.buildings.buyMax, mode: "max" },
   ];
+  // Keyboard shortcuts on the focused row: 1 = ×1, 2 = ×10, 3 = Max (cahier §10).
+  const onKeyDown = (e: KeyboardEvent) => {
+    const mode = ({ "1": 1, "2": 10, "3": "max" } as const)[e.key as "1" | "2" | "3"];
+    if (mode === undefined || e.ctrlKey || e.metaKey || e.altKey) return;
+    e.preventDefault();
+    onBuy(def.id, mode);
+  };
   return (
-    <li className={styles.item}>
+    <li className={styles.item} onKeyDown={onKeyDown}>
       <div className={styles.itemHead}>
         <span className={styles.itemName}>{def.name}</span>
         <span className={styles.muted}>
@@ -658,7 +700,7 @@ function EventWindow({ state, onAnswer }: { state: GameState; onAnswer: (choiceI
 
   const slowed = state.effects.some((e) => e.kind === "slowdown");
   return (
-    <div className={styles.event} role="alertdialog" aria-labelledby="ev-title">
+    <div className={`${styles.event} ${styles.eventSheet}`} role="alertdialog" aria-labelledby="ev-title">
       <h2 id="ev-title" className={styles.windowTitle}>{def.title}</h2>
       <p className={styles.itemText}>{def.text}</p>
       <div className={styles.buyRow}>

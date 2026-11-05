@@ -356,3 +356,79 @@
     padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
   }
 }
+
+/* Phase 7 : mobile pensé pour le pouce. */
+.pinned {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .desktopOnly {
+    display: none;
+  }
+
+  /* Resources pinned at the top, compact, always in view. */
+  .pinned {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem var(--space-3);
+    margin-inline: calc(-1 * var(--space-3));
+    padding: var(--space-2) var(--space-3);
+    background: var(--ink);
+    border-bottom: 1px solid var(--line);
+    color: var(--phosphor);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .grid {
+    touch-action: pan-y; /* vertical scroll stays native; horizontal swipes change tab */
+  }
+}
+
+/* Phones: tab bar at the bottom, within thumb reach; events rise as a sheet above it. */
+@media (max-width: 599px) {
+  .screen {
+    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+  }
+
+  .tabs {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 10;
+    padding: 0.25rem 0.25rem calc(0.25rem + env(safe-area-inset-bottom));
+    background: var(--ink);
+    border-top: 1px solid var(--line);
+  }
+
+  .eventSheet {
+    position: fixed;
+    inset: auto 0 calc(3.25rem + env(safe-area-inset-bottom)) 0;
+    z-index: 9;
+    max-height: 60dvh;
+    overflow-y: auto;
+    padding: var(--space-4);
+    background: var(--ink-raised);
+    border-top: 1px solid var(--phosphor);
+    animation: rise 240ms ease-out;
+  }
+}
+
+/* Tablets: two columns. Resources stay on the left, the chosen panel on the right. */
+@media (min-width: 600px) and (max-width: 899px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+    align-items: start;
+  }
+
+  .grid > .window:first-child {
+    display: grid;
+  }
+
+  .grid[data-tab="produce"] > .buyWindow {
+    display: grid;
+  }
+}
