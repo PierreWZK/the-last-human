@@ -54,5 +54,13 @@ export const MODEL_INTELLIGENCE_PER_SECOND = 0.2;
 /** Bonus de production par point d'Intelligence : toute la production × (1 + Intelligence × ce facteur). */
 export const INTELLIGENCE_BONUS = 0.001;
 
-/** Améliorations de l'ère III : à venir (pas encore de contenu validé). */
-export const UPGRADES_ERA3: UpgradeDef[] = [];
+const owned = (building: BuildingDef["id"], count: number) => ({ kind: "owned" as const, building, count });
+
+/** Améliorations de l'ère III : toutes requises pour la renaissance III. */
+export const UPGRADES_ERA3: UpgradeDef[] = [
+  { id: "tensorCores", name: "Cœurs tensoriels", description: "Des circuits faits pour multiplier des matrices. Serveurs GPU ×2.", cost: D(1_000_000), costResource: "compute", target: { kind: "building", building: "gpuServer" }, factor: 2, requires: owned("gpuServer", 10), era: 3 },
+  { id: "immersionCooling", name: "Refroidissement par immersion", description: "Les cartes tournent plus vite quand elles baignent. Serveurs GPU ×2.", cost: D(5_000_000), costResource: "compute", target: { kind: "building", building: "gpuServer" }, factor: 2, requires: owned("gpuServer", 25), era: 3 },
+  { id: "syntheticData", name: "Données synthétiques", description: "Les modèles écrivent leurs propres exemples. Laboratoires ×2.", cost: D(200_000), costResource: "data", target: { kind: "building", building: "dataLab" }, factor: 2, requires: owned("dataLab", 10), era: 3 },
+  { id: "toolUse", name: "Usage d'outils", description: "Chaque laboratoire ajoute 5 % aux agents autonomes.", cost: D(10_000_000), costResource: "compute", target: { kind: "synergy", building: "agent", source: "dataLab", perUnit: 0.05 }, factor: 1, requires: owned("agent", 5), era: 3 },
+  { id: "selfReview", name: "Relecture automatique", description: "Les agents vérifient le travail des agents. Agents ×2.", cost: D(30_000_000), costResource: "compute", target: { kind: "building", building: "agent" }, factor: 2, requires: owned("agent", 10), era: 3 },
+];

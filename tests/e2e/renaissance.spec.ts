@@ -109,3 +109,46 @@ test("en ère III, on lance un entraînement de modèle", async ({ page }) => {
   await page.getByRole("button", { name: "Lancer un entraînement" }).click();
   await expect(page.getByRole("button", { name: "Entraînement en cours" })).toBeVisible();
 });
+
+/** A v6 save in era IV, after one renaissance III, with two Neural Cores to place. */
+const ERA_FOUR = (() => {
+  const env = JSON.parse(ERA_THREE);
+  env.schemaVersion = 6;
+  Object.assign(env.state, {
+    schemaVersion: 6,
+    era: 4,
+    renaissances: 3,
+    renaissances3: 1,
+    neuralCores: 2,
+    neuralGrid: [null, null, null, null, null, null, null, null, null],
+  });
+  env.state.resources = { ...env.state.resources, robots: "0", autonomy: "0" };
+  env.state.buildings = { ...env.state.buildings, robotFactory: 0, planner: 0, gigafactory: 0 };
+  return JSON.stringify(env);
+})();
+
+test("en ère IV, on place un core sur la grille neuronale", async ({ page }) => {
+  await page.addInitScript(
+    ([key, value]) => {
+      if (!sessionStorage.getItem("seeded")) {
+        localStorage.setItem(key, value);
+        sessionStorage.setItem("seeded", "1");
+      }
+    },
+    [SAVE_KEY, ERA_FOUR],
+  );
+  await page.goto("/");
+
+  await expect(page.getByText("Ère IV · The Autonomous Age")).toBeVisible();
+  await expect(page.getByText("Robots", { exact: true })).toBeVisible();
+
+  const width = page.viewportSize()?.width ?? 1440;
+  if (width < 900) await page.getByRole("button", { name: "Améliorer", exact: true }).click();
+
+  await expect(page.getByText("Neural Cores à placer : 2")).toBeVisible();
+  await page.getByRole("radio", { name: "Core de réplication" }).click();
+  await page.getByRole("button", { name: "Case 5 vide : placer Core de réplication" }).click();
+  await expect(page.getByText("Neural Cores à placer : 1")).toBeVisible();
+  await page.getByRole("button", { name: /Case 5 : Core de réplication/ }).click();
+  await expect(page.getByText("Neural Cores à placer : 2")).toBeVisible();
+});

@@ -1,9 +1,11 @@
 import type Decimal from "break_infinity.js";
 
 /** Version of the save format. Bump it with a migration when GameState changes shape. */
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
-export type ResourceId = "money" | "data" | "compute" | "intelligence";
+export type Era = 1 | 2 | 3 | 4;
+
+export type ResourceId = "money" | "data" | "compute" | "intelligence" | "robots" | "autonomy";
 
 export type EraOneBuildingId = "homePage" | "forum" | "shop" | "shareware" | "portal" | "rentedServer";
 
@@ -11,7 +13,9 @@ export type EraTwoBuildingId = "dataCollector" | "buyScript" | "database" | "clo
 
 export type EraThreeBuildingId = "gpuServer" | "dataLab" | "agent";
 
-export type BuildingId = EraOneBuildingId | EraTwoBuildingId | EraThreeBuildingId;
+export type EraFourBuildingId = "robotFactory" | "planner" | "gigafactory";
+
+export type BuildingId = EraOneBuildingId | EraTwoBuildingId | EraThreeBuildingId | EraFourBuildingId;
 
 export interface BuildingDef {
   id: BuildingId;
@@ -23,7 +27,7 @@ export interface BuildingDef {
   produces: { resource: ResourceId; perSecond: Decimal };
   growth: number;
   /** The era that introduces the building. */
-  era: 1 | 2 | 3;
+  era: Era;
 }
 
 export type UpgradeTarget =
@@ -43,7 +47,7 @@ export interface UpgradeDef {
   factor: number;
   requires: UpgradeRequirement;
   /** The era that introduces the upgrade. */
-  era: 1 | 2 | 3;
+  era: Era;
 }
 
 export type UpgradeRequirement =
@@ -107,8 +111,8 @@ export interface GameState {
   archives: Record<string, true>;
   /** Unlocked achievements. */
   achievements: Record<string, true>;
-  /** Current era: 1 until the first renaissance, 2 after it, 3 after the second. */
-  era: 1 | 2 | 3;
+  /** Current era: 1 until the first renaissance, then one more per renaissance (I, II, III). */
+  era: Era;
   /** The building the owned scripts buy, as soon as it is affordable (era II). */
   scriptTarget: BuildingId | null;
   /** Renaissances completed, lifetime (I and II). */
@@ -125,6 +129,12 @@ export interface GameState {
   models: number[];
   /** Training run in progress: finishes at this game time, or null. */
   training: { endsAtMs: number } | null;
+  /** Renaissances III completed. */
+  renaissances3: number;
+  /** Neural Cores not placed on the grid. */
+  neuralCores: number;
+  /** Neural grid, row by row: the core placed in each cell, or null. */
+  neuralGrid: (string | null)[];
   /** Knowledge points available to spend on the Knowledge tree. */
   knowledgePoints: number;
   /** Knowledge bonuses bought. */

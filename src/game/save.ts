@@ -2,11 +2,13 @@ import { BUILDINGS, UPGRADES } from "@/content/era1";
 import { BUILDINGS_ERA2, UPGRADES_ERA2 } from "@/content/era2";
 import { ALGORITHMS } from "@/content/algorithms";
 import { BUILDINGS_ERA3, UPGRADES_ERA3 } from "@/content/era3";
+import { BUILDINGS_ERA4, UPGRADES_ERA4 } from "@/content/era4";
+import { CORES, GRID_CELLS } from "@/content/neural";
 import { ACHIEVEMENTS, ARCHIVES, EVENTS, EVENT_GAP_MS, RANDOM_EVENTS } from "@/content/events1";
 import { KNOWLEDGE_BONUSES } from "@/content/knowledge";
 import { D } from "./decimal";
-import { createInitialState } from "./engine";
-import { SCHEMA_VERSION, type BuildingId, type GameState } from "./types";
+import { RESOURCE_IDS, createInitialState } from "./engine";
+import { SCHEMA_VERSION, type BuildingId, type Era, type GameState, type ResourceId } from "./types";
 
 /**
  * Save format. A save is an envelope with a schemaVersion; numbers are stored as strings
@@ -20,7 +22,10 @@ export const BACKUP_KEY = "the-last-human:save-backup";
 interface SerializedState {
   schemaVersion: number;
   elapsedMs: number;
-  resources: { money: string; data: string; compute: string; intelligence: string };
+  resources: Record<ResourceId, string>;
+  renaissances3: number;
+  neuralCores: number;
+  neuralGrid: (string | null)[];
 renaissances2: number;
 algorithmPoints: number;
 algorithms: Record<string, true>;
@@ -64,12 +69,10 @@ export function serialize(state: GameState, now: Date = new Date()): string {
     state: {
       schemaVersion: state.schemaVersion,
       elapsedMs: state.elapsedMs,
-      resources: {
-        money: state.resources.money.toString(),
-        data: state.resources.data.toString(),
-        compute: state.resources.compute.toString(),
-        intelligence: state.resources.intelligence.toString(),
-      },
+      resources: Object.fromEntries(RESOURCE_IDS.map((r) => [r, state.resources[r].toString()])) as Record<ResourceId, string>,
+      renaissances3: state.renaissances3,
+      neuralCores: state.neuralCores,
+      neuralGrid: [...state.neuralGrid],
       era: state.era,
       scriptTarget: state.scriptTarget,
       totalMoney: state.totalMoney.toString(),
@@ -165,6 +168,14 @@ const MIGRATIONS: Array<(raw: Record<string, unknown>) => Record<string, unknown
     models: [],
     training: null,
   }),
+  // v5 -> v6: era IV adds Robots, Autonomie, renaissance III and the neural grid.
+  (raw) => ({
+    ...raw,
+    resources: { ...(isRecord(raw.resources) ? raw.resources : {}), robots: "0", autonomy: "0" },
+    renaissances3: 0,
+    neuralCores: 0,
+    neuralGrid: Array(GRID_CELLS).fill(null),
+  }),
 ];
 
 function migrate(raw: Record<string, unknown>, fromVersion: number): LoadResult {
@@ -181,19 +192,30 @@ const EVENT_IDS = new Set([...EVENTS, ...RANDOM_EVENTS].map((e) => e.id));
 const ARCHIVE_IDS = new Set(ARCHIVES.map((a) => a.id));
 const ACHIEVEMENT_IDS = new Set(ACHIEVEMENTS.map((a) => a.id));
 const KNOWLEDGE_IDS = new Set(KNOWLEDGE_BONUSES.map((b) => b.id));
-const BUILDING_IDS = new Set<string>([...BUILDINGS, ...BUILDINGS_ERA2, ...BUILDINGS_ERA3].map((b) => b.id));
+const BUILDING_IDS = new Set<string>([...BUILDINGS, ...BUILDINGS_ERA2, ...BUILDINGS_ERA3, ...BUILDINGS_ERA4].map((b) => b.id));
 const ALGORITHM_IDS = new Set(ALGORITHMS.map((a) => a.id));
+const CORE_IDS = new Set(CORES.map((c) => c.id));
 
 function validate(raw: Record<string, unknown>): LoadResult {
   const { elapsedMs, resources, totalMoney, buildings, upgrades, event, effects } = raw;
 
   if (!isNonNegativeFinite(elapsedMs)) return bad("Temps de jeu invalide");
   if (!isRecord(resources)) return bad("Ressources invalides");
-  const money = parseDecimal(resources.money);
-  const data = parseDecimal(resources.data);
-  const compute = parseDecimal(resources.compute);
-  const intelligence = parseDecimal(resources.intelligence);
-  if (!money || !data || !compute || !intelligence) return bad("Quantité de ressource invalide");
+  const parsedResources = {} as GameState["resources"];
+  for (const r of RESOURCE_IDS) {
+    const value = parseDecimal(resources[r]);
+    if (!value) return bad("Quantité de ressource invalide");
+    parsedResources[r] = value;
+  }
+  if (!isNonNegativeFinite(raw.renaissances3) || !Number.isSafeInteger(raw.renaissances3)) return bad("Renaissances III invalides");
+  if (!isNonNegativeFinite(raw.neuralCores) || !Number.isSafeInteger(raw.neuralCores)) return bad("Neural Cores invalides");
+  if (
+    !Array.isArray(raw.neuralGrid) ||
+    raw.neuralGrid.length !== GRID_CELLS ||
+    raw.neuralGrid.some((id) => id !== null && !CORE_IDS.has(id as string))
+  ) {
+    return bad("Grille neuronale invalide");
+  }
   if (!isNonNegativeFinite(raw.renaissances2) || !Number.isSafeInteger(raw.renaissances2)) return bad("Renaissances II invalides");
   if (!isNonNegativeFinite(raw.algorithmPoints) || !Number.isSafeInteger(raw.algorithmPoints)) return bad("Points d'algorithmes invalides");
   if (!isRecord(raw.algorithms)) return bad("Algorithmes invalides");
@@ -209,7 +231,7 @@ function validate(raw: Record<string, unknown>): LoadResult {
   if (raw.training !== null && !(isRecord(raw.training) && isNonNegativeFinite(raw.training.endsAtMs))) {
     return bad("Entraînement invalide");
   }
-  if (raw.era !== 1 && raw.era !== 2 && raw.era !== 3) return bad("Ère invalide");
+  if (raw.era !== 1 && raw.era !== 2 && raw.era !== 3 && raw.era !== 4) return bad("Ère invalide");
   if (raw.scriptTarget !== null && !BUILDING_IDS.has(raw.scriptTarget as string)) {
     return bad("Cible de script inconnue");
   }
@@ -225,7 +247,7 @@ function validate(raw: Record<string, unknown>): LoadResult {
   if (!isRecord(buildings)) return bad("Bâtiments invalides");
   const buildingIds = BUILDING_IDS;
   const parsedBuildings = {} as Record<BuildingId, number>;
-  for (const def of [...BUILDINGS, ...BUILDINGS_ERA2, ...BUILDINGS_ERA3]) {
+  for (const def of [...BUILDINGS, ...BUILDINGS_ERA2, ...BUILDINGS_ERA3, ...BUILDINGS_ERA4]) {
     const count = buildings[def.id];
     if (count === undefined) {
       parsedBuildings[def.id] = 0;
@@ -239,7 +261,7 @@ function validate(raw: Record<string, unknown>): LoadResult {
   }
 
   if (!isRecord(upgrades)) return bad("Améliorations invalides");
-  const upgradeIds = new Set([...UPGRADES, ...UPGRADES_ERA2, ...UPGRADES_ERA3].map((u) => u.id));
+  const upgradeIds = new Set([...UPGRADES, ...UPGRADES_ERA2, ...UPGRADES_ERA3, ...UPGRADES_ERA4].map((u) => u.id));
   const parsedUpgrades: Record<string, true> = {};
   for (const [key, value] of Object.entries(upgrades)) {
     if (!upgradeIds.has(key) || value !== true) return bad(`Amélioration inconnue : ${key}`);
@@ -283,14 +305,17 @@ function validate(raw: Record<string, unknown>): LoadResult {
   const state: GameState = {
     ...base,
     elapsedMs: elapsedMs as number,
-    resources: { money, data, compute, intelligence },
+    resources: parsedResources,
+    renaissances3: raw.renaissances3 as number,
+    neuralCores: raw.neuralCores as number,
+    neuralGrid: raw.neuralGrid as (string | null)[],
     renaissances2: raw.renaissances2 as number,
     algorithmPoints: raw.algorithmPoints as number,
     algorithms: raw.algorithms as Record<string, true>,
     equippedAlgorithms: raw.equippedAlgorithms as string[],
     models: raw.models as number[],
     training: raw.training as { endsAtMs: number } | null,
-    era: raw.era as 1 | 2 | 3,
+    era: raw.era as Era,
     scriptTarget: raw.scriptTarget as BuildingId | null,
     totalMoney: totalMoneyValue,
     totalClicks: raw.totalClicks as number,

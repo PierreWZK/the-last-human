@@ -7,6 +7,7 @@ export const fr = {
     1: { name: "Ère I · The Digital Age", years: "1990–2005" },
     2: { name: "Ère II · The Automation Age", years: "2005–2020" },
     3: { name: "Ère III · The AI Revolution", years: "2020–2040" },
+    4: { name: "Ère IV · The Autonomous Age", years: "2040–2100" },
   },
   scripts: {
     label: "Cible des scripts d'achat",
@@ -26,6 +27,8 @@ export const fr = {
     data: "Données",
     compute: "Calcul",
     intelligence: "Intelligence",
+    robots: "Robots",
+    autonomy: "Autonomie",
     perSecond: "par seconde",
     totalMoney: "Gains au total",
   },
@@ -96,6 +99,25 @@ export const fr = {
     lose: "Perdu : argent, données, Calcul, bâtiments et améliorations de l'ère II. Le gain total repart de zéro.",
     keep: "Gardé : succès, archives, Knowledge, algorithmes achetés.",
     gain: "Gagné : {points} point(s) d'algorithme, un emplacement d'algorithme de plus, et l'accès à l'ère III.",
+  },
+  renaissance3: {
+    title: "Renaissance III",
+    locked: "Terminez toutes les améliorations de l'ère III pour ouvrir la renaissance III.",
+    lose: "Perdu : toutes les ressources, bâtiments, améliorations et modèles des ères I à III. Le gain total repart de zéro.",
+    keep: "Gardé : succès, archives, Knowledge, algorithmes, grille neuronale.",
+    gain: "Gagné : {points} Neural Core(s) à placer sur la grille neuronale, et l'accès à l'ère IV.",
+  },
+  grid: {
+    title: "Grille neuronale",
+    cores: "Neural Cores à placer : {count}",
+    hint: "Choisissez un core, puis touchez une case vide. Chaque voisin occupé augmente le bonus de moitié. Touchez un core pour le retirer : il vous est rendu.",
+    empty: "Case vide",
+    cell: "Case {n} : {name}, ×{factor}",
+    place: "Case {n} vide : placer {name}",
+  },
+  autonomy: {
+    replication: "Auto-réplication : chaque robot en fabrique {rate} par seconde.",
+    autoTraining: "Avec {threshold} d'Autonomie, les entraînements démarrent seuls.",
   },
   algorithms: {
     title: "Algorithmes",

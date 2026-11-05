@@ -39,7 +39,7 @@ function eraThree(overrides: Partial<GameState> = {}): GameState {
   return {
     ...createInitialState(21),
     era: 3,
-    resources: { money: D(0), data: D(10_000), compute: D(100_000), intelligence: D(0) },
+    resources: { money: D(0), data: D(10_000), compute: D(100_000), intelligence: D(0), robots: D(0), autonomy: D(0) },
     ...overrides,
   };
 }
@@ -132,7 +132,7 @@ describe("ère III : entraînement et Intelligence", () => {
   it("un entraînement ne démarre qu'en ère III, avec les ressources nécessaires", () => {
     const era2 = { ...eraThree(), era: 2 as const };
     expect(startTraining(era2)).toBe(era2);
-    const poor = eraThree({ resources: { money: D(0), data: D(1), compute: D(1), intelligence: D(0) } });
+    const poor = eraThree({ resources: { money: D(0), data: D(1), compute: D(1), intelligence: D(0), robots: D(0), autonomy: D(0) } });
     expect(startTraining(poor)).toBe(poor);
   });
 

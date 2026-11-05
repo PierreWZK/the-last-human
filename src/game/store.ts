@@ -7,6 +7,9 @@ import {
   createInitialState,
   renaissance,
   renaissance2,
+  renaissance3,
+  placeCore,
+  removeCore,
   buyAlgorithm,
   equipAlgorithm,
   unequipAlgorithm,
@@ -113,6 +116,12 @@ export class GameStore {
   unequipAlgorithm = (id: string): void => this.update((s) => unequipAlgorithm(s, id));
 
   startTraining = (): void => this.update((s) => startTraining(s));
+
+  renaissance3 = (): void => this.update((s) => renaissance3(s));
+
+  placeCore = (cell: number, coreId: string): void => this.update((s) => placeCore(s, cell, coreId));
+
+  removeCore = (cell: number): void => this.update((s) => removeCore(s, cell));
 
   /** Writes the current state to localStorage. Never overwrites a save it cannot read. */
   save = (): void => {

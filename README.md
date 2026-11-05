@@ -29,8 +29,9 @@ Légende : ✅ fait · 🚧 en cours · ⏳ prévu.
 | Économie longue, multiplicateurs, déblocages | ✅ Phase 2 |
 | Événements à choix (aléatoires à graine), Human Dependency, 6 Human Archives, 7 succès | ✅ Phase 3 |
 | Renaissance I (Knowledge, arbre de 4 bonus), ère II (Calcul, 6 bâtiments, 10 améliorations, scripts d'achat) | ✅ Phase 4 (PR en revue) |
-| Renaissance II (Algorithmes, emplacements), ère III (Intelligence, entraînement de modèles, 3 bâtiments) | ✅ Phase 4 bis (PR en revue) |
-| Renaissances III et IV (Neural Cores, AI Cores), ère IV, grille neuronale | ⏳ Phase 4 ter |
+| Renaissance II (Algorithmes, emplacements), ère III (Intelligence, entraînement de modèles, 3 bâtiments) | ✅ Phase 4 bis |
+| Renaissance III (Neural Cores, grille neuronale 3 × 3), ère IV (Robots, Autonomie, auto-réplication) | ✅ Phase 4 ter (PR en revue) |
+| Renaissance IV (AI Cores, politiques de civilisation) | ⏳ Phase 9 |
 | Comptes (pseudo ou email + mot de passe), sauvegarde cloud | ⏳ Phase 5 |
 | Gains hors ligne (24 h maximum, horloge serveur) | ⏳ Phase 6 |
 | Expérience mobile avancée | ⏳ Phase 7 |
