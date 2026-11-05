@@ -8,6 +8,10 @@ import {
   renaissance,
   renaissance2,
   renaissance3,
+  renaissance4,
+  buyPolicy,
+  giveDirective,
+  newHumanity,
   placeCore,
   removeCore,
   buyAlgorithm,
@@ -92,7 +96,7 @@ export class GameStore {
   // Actions -------------------------------------------------------------
 
   click = (): void => {
-    if (this.snapshot.readOnly) return;
+    if (this.snapshot.readOnly || this.snapshot.state.endedAtMs !== null) return;
     this.snapshot = {
       ...this.snapshot,
       state: clickManual(this.snapshot.state),
@@ -128,6 +132,20 @@ export class GameStore {
   placeCore = (cell: number, coreId: string): void => this.update((s) => placeCore(s, cell, coreId));
 
   removeCore = (cell: number): void => this.update((s) => removeCore(s, cell));
+
+  renaissance4 = (): void => this.update((s) => renaissance4(s));
+
+  buyPolicy = (id: string): void => this.update((s) => buyPolicy(s, id));
+
+  giveDirective = (id: string): void => this.update((s) => giveDirective(s, id));
+
+  /** « Nouvelle humanité » : only once the game has ended. The finished one stays in the backup slot. */
+  newHumanity = (): void => {
+    const s = this.snapshot.state;
+    if (s.endedAtMs === null || this.snapshot.readOnly) return;
+    const fresh = newGame();
+    this.replaceState(newHumanity(s, fresh.rngSeed, fresh.runId));
+  };
 
   /** The current state as a save envelope (export, cloud upload). */
   serialized = (): string => serialize(this.snapshot.state);
@@ -204,7 +222,7 @@ export class GameStore {
   };
 
   private update(fn: (s: GameState) => GameState): void {
-    if (this.snapshot.readOnly) return;
+    if (this.snapshot.readOnly || this.snapshot.state.endedAtMs !== null) return; // a finished game is frozen
     const next = fn(this.snapshot.state);
     if (next === this.snapshot.state) return;
     this.snapshot = { ...this.snapshot, state: next };
@@ -245,7 +263,8 @@ export class GameStore {
 
 /** A new game gets a fresh random seed, so random events differ between players. */
 export function newGame() {
-  return createInitialState(Math.floor(Math.random() * 2 ** 31) + 1);
+  const runId = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `run-${Date.now()}`;
+  return createInitialState(Math.floor(Math.random() * 2 ** 31) + 1, runId);
 }
 
 /** Shared instance for the browser. Created lazily so that the server never touches storage. */

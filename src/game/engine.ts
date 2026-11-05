@@ -21,6 +21,17 @@ import {
   REPLICATION_PER_SECOND,
   UPGRADES_ERA4,
 } from "@/content/era4";
+import {
+  AI_CORE_DIVISOR,
+  CONTROL_BASE,
+  DIRECTIVES,
+  ERA5_REPLICATION,
+  ERA5_START_MACHINES,
+  MACHINES_GOAL,
+  POLICIES,
+  ROBOTS_FOR_RENAISSANCE4,
+  type PolicyDef,
+} from "@/content/era5";
 import { CORES, GRID_CELLS, GRID_SIDE, NEIGHBOR_BONUS, NEURAL_CORE_DIVISOR, type CoreKind } from "@/content/neural";
 import { D, ZERO } from "./decimal";
 import { nextRandom } from "./rng";
@@ -47,10 +58,10 @@ export const ALL_BUILDINGS = [...BUILDINGS, ...BUILDINGS_ERA2, ...BUILDINGS_ERA3
 
 export const ALL_UPGRADES = [...UPGRADES, ...UPGRADES_ERA2, ...UPGRADES_ERA3, ...UPGRADES_ERA4];
 
-export const RESOURCE_IDS: ResourceId[] = ["money", "data", "compute", "intelligence", "robots", "autonomy"];
+export const RESOURCE_IDS: ResourceId[] = ["money", "data", "compute", "intelligence", "robots", "autonomy", "control"];
 
 function emptyResources(): Record<ResourceId, Decimal> {
-  return { money: ZERO, data: ZERO, compute: ZERO, intelligence: ZERO, robots: ZERO, autonomy: ZERO };
+  return { money: ZERO, data: ZERO, compute: ZERO, intelligence: ZERO, robots: ZERO, autonomy: ZERO, control: ZERO };
 }
 
 const CORE_BY_ID = new Map(CORES.map((c) => [c.id, c]));
@@ -62,17 +73,19 @@ const UPGRADE_BY_ID = new Map(ALL_UPGRADES.map((u) => [u.id, u]));
 
 /** Buildings the player can see and buy in the current era. */
 export function visibleBuildings(state: GameState) {
+  if (state.era === 5) return []; // era V: nothing left to build
   return ALL_BUILDINGS.filter((b) => b.era <= state.era);
 }
 
 /** Upgrades the player can see and buy in the current era. */
 export function visibleUpgrades(state: GameState) {
+  if (state.era === 5) return [];
   return ALL_UPGRADES.filter((u) => u.era <= state.era);
 }
 const EVENT_BY_ID = new Map([...EVENTS, ...RANDOM_EVENTS].map((e) => [e.id, e]));
 
 /** `seed` is only used for the random events; the game passes a fresh one per new game. */
-export function createInitialState(seed = 1): GameState {
+export function createInitialState(seed = 1, runId = `seed-${seed}`): GameState {
   return {
     schemaVersion: SCHEMA_VERSION,
     elapsedMs: 0,
@@ -102,6 +115,15 @@ export function createInitialState(seed = 1): GameState {
     neuralGrid: Array<string | null>(GRID_CELLS).fill(null),
     knowledgePoints: 0,
     knowledgeBonuses: {},
+    renaissances4: 0,
+    aiCores: 0,
+    policies: {},
+    directives: {},
+    eraStartedMs: [0],
+    journal: [],
+    runId,
+    endings: 0,
+    endedAtMs: null,
   };
 }
 
@@ -237,6 +259,11 @@ export function productionPerSecond(state: GameState): Record<ResourceId, Decima
   // The grid boosts the factories only: boosting replication would multiply the exponent.
   rates.robots = rates.robots.mul(gridFactor(state, "robots")).add(state.resources.robots.mul(replicationRate(state)));
   rates.autonomy = rates.autonomy.mul(gridFactor(state, "autonomy"));
+  // Era V: the player no longer produces. Machines replicate, Contrôle accumulates.
+  if (state.era === 5) {
+    rates.robots = state.resources.robots.mul(era5Replication(state));
+    rates.control = D(controlRate(state));
+  }
   return rates;
 }
 
@@ -245,6 +272,7 @@ export function productionPerSecond(state: GameState): Record<ResourceId, Decima
  * own and their base output, each with its human share (cahier §4.7). Starts at 1.
  */
 export function humanDependency(state: GameState): number {
+  if (state.era === 5) return Math.max(0, 1 - automation(state));
   let total = 0;
   let human = 0;
   for (const def of ALL_BUILDINGS) {
@@ -301,6 +329,7 @@ export function renaissance(state: GameState): GameState {
     upgrades: {},
     effects: [],
     era: 2,
+    eraStartedMs: [...state.eraStartedMs, state.elapsedMs],
     scriptTarget: null,
     renaissances: state.renaissances + 1,
     knowledgePoints: state.knowledgePoints + knowledgeGain(state),
@@ -397,7 +426,7 @@ export function clickManual(state: GameState): GameState {
 
 /** Advances game time by `dtMs`: production, timed effects, event schedule, unlocks. */
 export function tick(state: GameState, dtMs: number): GameState {
-  if (!(dtMs > 0)) return state;
+  if (!(dtMs > 0) || state.endedAtMs !== null) return state;
   const seconds = dtMs / 1000;
   const rates = productionPerSecond(state);
   const gainMoney = rates.money.mul(seconds);
@@ -430,10 +459,11 @@ export function tick(state: GameState, dtMs: number): GameState {
   // The scripted event comes first; random events only after it has been answered.
   if (next.event.status === "pending" && next.totalMoney.gte(Y2K_TRIGGER_MONEY)) {
     next = { ...next, event: { status: "open", id: Y2K_ID } };
-  } else if (next.event.status === "resolved" && elapsedMs >= next.nextEventAtMs) {
+  } else if (next.era < 5 && next.event.status === "resolved" && elapsedMs >= next.nextEventAtMs) {
     next = openRandomEvent(next);
   }
-  return refreshUnlocks(next);
+  next = refreshUnlocks(next);
+  return isEndReached(next) ? { ...next, endedAtMs: next.elapsedMs } : next;
 }
 
 function openRandomEvent(state: GameState): GameState {
@@ -464,8 +494,10 @@ export function resolveEvent(state: GameState, choiceId: string): GameState {
     resources: { ...state.resources, money: state.resources.money.sub(spend) },
   };
   for (const effect of choice.effects) next = applyEffect(next, effect);
+  const firstAnswer = !next.journal.some((j) => j.startsWith(`${def.id}:`));
   return refreshUnlocks({
     ...next,
+    journal: firstAnswer ? [...next.journal, `${def.id}:${choice.id}`] : next.journal,
     event: { status: "resolved", id: def.id, choice: choice.id },
     eventsResolved: next.eventsResolved + 1,
     nextEventAtMs: Math.max(next.nextEventAtMs, next.elapsedMs + EVENT_GAP_MS.min),
@@ -554,6 +586,7 @@ export function renaissance2(state: GameState): GameState {
     upgrades: {},
     effects: [],
     era: 3,
+    eraStartedMs: [...state.eraStartedMs, state.elapsedMs],
     scriptTarget: null,
     models: [],
     training: null,
@@ -650,6 +683,7 @@ export function renaissance3(state: GameState): GameState {
     upgrades: {},
     effects: [],
     era: 4,
+    eraStartedMs: [...state.eraStartedMs, state.elapsedMs],
     scriptTarget: null,
     models: [],
     training: null,
@@ -704,4 +738,118 @@ export function gridFactor(state: GameState, kind: CoreKind): number {
     if (id && CORE_BY_ID.get(id)?.kind === kind) m *= coreFactor(state.neuralGrid, cell);
   });
   return m;
+}
+
+// Renaissance IV and era V ----------------------------------------------
+
+/** Product of the bought policies' factors of one kind. */
+export function policyFactor(state: GameState, kind: PolicyDef["effect"]["kind"]): number {
+  let m = 1;
+  for (const p of POLICIES) if (state.policies[p.id] && p.effect.kind === kind) m *= p.effect.factor;
+  return m;
+}
+
+/** Renaissance IV: every upgrade of era IV and enough robots. Opens era V. */
+export function canRenaissance4(state: GameState): boolean {
+  return (
+    state.era === 4 &&
+    state.event.status !== "open" &&
+    UPGRADES_ERA4.every((u) => state.upgrades[u.id]) &&
+    state.resources.robots.gte(ROBOTS_FOR_RENAISSANCE4)
+  );
+}
+
+/** AI Cores a renaissance IV would grant now: floor(√gains totaux / AI_CORE_DIVISOR), at least 1. */
+export function aiCoreGain(state: GameState): number {
+  return Math.max(1, Math.floor(Math.sqrt(state.totalMoney.toNumber()) / AI_CORE_DIVISOR));
+}
+
+/** Renaissance IV: resets eras I to IV. Keeps every meta-progress; era V starts with a fleet of machines. */
+export function renaissance4(state: GameState): GameState {
+  if (!canRenaissance4(state)) return state;
+  return refreshUnlocks({
+    ...state,
+    resources: { ...emptyResources(), robots: D(ERA5_START_MACHINES) },
+    totalMoney: ZERO,
+    buildings: Object.fromEntries(ALL_BUILDINGS.map((b) => [b.id, 0])) as Record<BuildingId, number>,
+    upgrades: {},
+    effects: [],
+    era: 5,
+    eraStartedMs: [...state.eraStartedMs, state.elapsedMs],
+    scriptTarget: null,
+    models: [],
+    training: null,
+    directives: {},
+    renaissances: state.renaissances + 1,
+    renaissances4: state.renaissances4 + 1,
+    aiCores: state.aiCores + aiCoreGain(state),
+    nextEventAtMs: state.elapsedMs + EVENT_GAP_MS.min,
+  });
+}
+
+export function buyPolicy(state: GameState, id: string): GameState {
+  const def = POLICIES.find((p) => p.id === id);
+  if (!def || state.policies[id] || state.aiCores < def.cost || state.endedAtMs !== null) return state;
+  return { ...state, aiCores: state.aiCores - def.cost, policies: { ...state.policies, [id]: true } };
+}
+
+/** Share of the work given to the machines by the directives, 0 to 1. */
+export function automation(state: GameState): number {
+  const sum = DIRECTIVES.reduce((acc, d) => (state.directives[d.id] ? acc + d.automation : acc), 0);
+  return Math.min(1, Math.round(sum * 1e9) / 1e9); // 0.15 + 0.15 + … must land exactly on 1
+}
+
+/** Machines made per machine and per second in era V. */
+export function era5Replication(state: GameState): number {
+  const fromDirectives = DIRECTIVES.reduce((acc, d) => (state.directives[d.id] ? acc * d.replication : acc), 1);
+  return ERA5_REPLICATION * fromDirectives * policyFactor(state, "replication");
+}
+
+/** Contrôle per second in era V: grows with the machines, on a log scale. */
+export function controlRate(state: GameState): number {
+  const log = Math.log10(1 + state.resources.robots.toNumber());
+  return CONTROL_BASE * log * log * policyFactor(state, "control");
+}
+
+export function directiveCost(state: GameState, id: string): number {
+  const def = DIRECTIVES.find((d) => d.id === id);
+  return def ? def.cost * policyFactor(state, "directiveCost") : Infinity;
+}
+
+/** The next directive to give (they come in order), or null once they are all given. */
+export function nextDirective(state: GameState) {
+  return DIRECTIVES.find((d) => !state.directives[d.id]) ?? null;
+}
+
+export function giveDirective(state: GameState, id: string): GameState {
+  const next = nextDirective(state);
+  if (state.era !== 5 || state.endedAtMs !== null || !next || next.id !== id) return state;
+  const cost = D(directiveCost(state, id));
+  if (state.resources.control.lt(cost)) return state;
+  const after = refreshUnlocks({
+    ...state,
+    resources: { ...state.resources, control: state.resources.control.sub(cost) },
+    directives: { ...state.directives, [id]: true },
+  });
+  return isEndReached(after) ? { ...after, endedAtMs: after.elapsedMs } : after;
+}
+
+/** The end (cahier §4, ère V): 7 billion machines, full automation, no human work left. */
+export function isEndReached(state: GameState): boolean {
+  return (
+    state.era === 5 &&
+    state.endedAtMs === null &&
+    state.resources.robots.gte(MACHINES_GOAL) &&
+    automation(state) >= 1 &&
+    humanDependency(state) === 0
+  );
+}
+
+/**
+ * « Nouvelle humanité » : a new game from zero, without any bonus (not a New Game+). Only the
+ * Human Archives (memories, no bonus) and the count of endings carry over.
+ */
+export function newHumanity(state: GameState, seed: number, runId: string): GameState {
+  if (state.endedAtMs === null) return state;
+  return { ...createInitialState(seed, runId), archives: { ...state.archives }, endings: state.endings + 1 };
 }

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { PGLiteSocketServer } from "@electric-sql/pglite-socket";
@@ -7,6 +7,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createInitialState } from "@/game/engine";
 import { serialize } from "@/game/save";
 import { PrismaClient } from "@/generated/prisma/client";
+import { MIN_RUN_MS } from "@/content/era5";
+import { readLeaderboard, readProfile, setHidden } from "./leaderboard";
 import { SNAPSHOTS_KEPT, claimDevice, plausibleGameTime, readSave, writeSave } from "./saves";
 
 /**
@@ -26,7 +28,10 @@ const SAVE = serialize(createInitialState(5));
 
 beforeAll(async () => {
   pglite = await PGlite.create();
-  await pglite.exec(readFileSync(path.join(__dirname, "../../prisma/migrations/0001_init/migration.sql"), "utf8"));
+  const migrations = path.join(__dirname, "../../prisma/migrations");
+  for (const dir of readdirSync(migrations, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name).sort()) {
+    await pglite.exec(readFileSync(path.join(migrations, dir, "migration.sql"), "utf8"));
+  }
   server = new PGLiteSocketServer({ db: pglite, port: 0, maxConnections: 5 });
   await server.start();
   const address = server.getServerConn();
@@ -42,6 +47,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  await db.run.deleteMany();
   await db.saveSnapshot.deleteMany();
   await db.save.deleteMany();
   await db.user.deleteMany();
@@ -134,5 +140,39 @@ describe("plausibilité du temps de jeu", () => {
     expect(plausibleGameTime(0, 180_000, 60_000)).toBe(true);
     expect(plausibleGameTime(0, 10 * 60_000, 60_000)).toBe(false);
     expect(plausibleGameTime(1_000_000, 0, 0)).toBe(true); // nouvelle partie : le temps recule
+  });
+});
+
+describe("classement", () => {
+  const ended = (runId: string) => serialize({ ...createInitialState(5, runId), endedAtMs: 1000 });
+
+  it("une humanité commence à la première sauvegarde et finit à la sauvegarde terminée, sur l'horloge du serveur", async () => {
+    await writeSave(db, ALICE, { deviceId: PHONE, baseRevision: 0, data: serialize(createInitialState(5, "run-alice-1")) });
+    await db.run.updateMany({ where: { userId: ALICE }, data: { startedAt: new Date(Date.now() - MIN_RUN_MS - 60_000) } });
+    await db.save.update({ where: { userId: ALICE }, data: { lastSeenAt: new Date(Date.now() - MIN_RUN_MS) } });
+    expect((await writeSave(db, ALICE, { deviceId: PHONE, baseRevision: 1, data: ended("run-alice-1") })).status).toBe(200);
+    const run = await db.run.findFirstOrThrow({ where: { userId: ALICE } });
+    expect(run.valid).toBe(true);
+    expect(run.durationSec).toBeGreaterThanOrEqual(MIN_RUN_MS / 1000);
+    const board = await readLeaderboard(db);
+    expect(board.fastest).toEqual([{ name: ALICE, value: run.durationSec }]);
+    expect(board.most).toEqual([{ name: ALICE, value: 1 }]);
+    expect(await readProfile(db, ALICE)).toMatchObject({ endings: 1, bestSec: run.durationSec, hidden: false });
+  });
+
+  it("une fin plus rapide que le minimum théorique est rejetée du classement", async () => {
+    await writeSave(db, BOB, { deviceId: PHONE, baseRevision: 0, data: ended("run-bob-1") });
+    const run = await db.run.findFirstOrThrow({ where: { userId: BOB } });
+    expect(run.endedAt).not.toBeNull();
+    expect(run.valid).toBe(false);
+    expect((await readLeaderboard(db)).fastest).toEqual([]);
+  });
+
+  it("un joueur peut se masquer du classement", async () => {
+    await db.run.create({ data: { userId: ALICE, runId: "run-x", endedAt: new Date(), durationSec: 99_999, valid: true } });
+    expect((await readLeaderboard(db)).most).toHaveLength(1);
+    expect(await setHidden(db, ALICE, { hidden: true })).toBe(true);
+    expect((await readLeaderboard(db)).most).toHaveLength(0);
+    expect(await setHidden(db, ALICE, { hidden: "oui" })).toBe(false);
   });
 });

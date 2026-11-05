@@ -6,6 +6,7 @@ import { BUILDINGS_ERA4, UPGRADES_ERA4 } from "@/content/era4";
 import { CORES, GRID_CELLS } from "@/content/neural";
 import { ACHIEVEMENTS, ARCHIVES, EVENTS, EVENT_GAP_MS, RANDOM_EVENTS } from "@/content/events1";
 import { KNOWLEDGE_BONUSES } from "@/content/knowledge";
+import { DIRECTIVES, POLICIES } from "@/content/era5";
 import { D } from "./decimal";
 import { RESOURCE_IDS, createInitialState } from "./engine";
 import { SCHEMA_VERSION, type BuildingId, type Era, type GameState, type ResourceId } from "./types";
@@ -48,6 +49,15 @@ training: { endsAtMs: number } | null;
   renaissances: number;
   knowledgePoints: number;
   knowledgeBonuses: Record<string, true>;
+  renaissances4: number;
+  aiCores: number;
+  policies: Record<string, true>;
+  directives: Record<string, true>;
+  eraStartedMs: number[];
+  journal: string[];
+  runId: string;
+  endings: number;
+  endedAtMs: number | null;
 }
 
 interface Envelope {
@@ -96,6 +106,15 @@ export function serialize(state: GameState, now: Date = new Date()): string {
       training: state.training,
       knowledgePoints: state.knowledgePoints,
       knowledgeBonuses: { ...state.knowledgeBonuses },
+      renaissances4: state.renaissances4,
+      aiCores: state.aiCores,
+      policies: { ...state.policies },
+      directives: { ...state.directives },
+      eraStartedMs: [...state.eraStartedMs],
+      journal: [...state.journal],
+      runId: state.runId,
+      endings: state.endings,
+      endedAtMs: state.endedAtMs,
     },
   };
   return JSON.stringify(envelope);
@@ -180,6 +199,26 @@ const MIGRATIONS: Array<(raw: Record<string, unknown>) => Record<string, unknown
     neuralCores: 0,
     neuralGrid: Array(GRID_CELLS).fill(null),
   }),
+  // v6 -> v7: era V adds Contrôle, renaissance IV, policies, directives, the end and the run id.
+  // Past eras have no recorded start: they are spread evenly on the game time already played.
+  (raw) => {
+    const era = typeof raw.era === "number" && raw.era >= 1 && raw.era <= 4 ? raw.era : 1;
+    const elapsed = typeof raw.elapsedMs === "number" && raw.elapsedMs >= 0 ? raw.elapsedMs : 0;
+    const seed = typeof raw.rngSeed === "number" ? raw.rngSeed : 1;
+    return {
+      ...raw,
+      resources: { ...(isRecord(raw.resources) ? raw.resources : {}), control: "0" },
+      renaissances4: 0,
+      aiCores: 0,
+      policies: {},
+      directives: {},
+      eraStartedMs: Array.from({ length: era }, (_, i) => Math.floor((elapsed * i) / era)),
+      journal: [],
+      runId: `seed-${seed}`,
+      endings: 0,
+      endedAtMs: null,
+    };
+  },
 ];
 
 function migrate(raw: Record<string, unknown>, fromVersion: number): LoadResult {
@@ -199,6 +238,10 @@ const KNOWLEDGE_IDS = new Set(KNOWLEDGE_BONUSES.map((b) => b.id));
 const BUILDING_IDS = new Set<string>([...BUILDINGS, ...BUILDINGS_ERA2, ...BUILDINGS_ERA3, ...BUILDINGS_ERA4].map((b) => b.id));
 const ALGORITHM_IDS = new Set(ALGORITHMS.map((a) => a.id));
 const CORE_IDS = new Set(CORES.map((c) => c.id));
+const POLICY_IDS = new Set(POLICIES.map((p) => p.id));
+const DIRECTIVE_IDS = new Set(DIRECTIVES.map((d) => d.id));
+const RUN_ID_PATTERN = /^[A-Za-z0-9-]{4,64}$/;
+const JOURNAL_PATTERN = /^[A-Za-z0-9-]{1,40}:[A-Za-z0-9-]{1,40}$/;
 
 function validate(raw: Record<string, unknown>): LoadResult {
   const { elapsedMs, resources, totalMoney, buildings, upgrades, event, effects } = raw;
@@ -235,7 +278,29 @@ function validate(raw: Record<string, unknown>): LoadResult {
   if (raw.training !== null && !(isRecord(raw.training) && isNonNegativeFinite(raw.training.endsAtMs))) {
     return bad("Entraînement invalide");
   }
-  if (raw.era !== 1 && raw.era !== 2 && raw.era !== 3 && raw.era !== 4) return bad("Ère invalide");
+  if (raw.era !== 1 && raw.era !== 2 && raw.era !== 3 && raw.era !== 4 && raw.era !== 5) return bad("Ère invalide");
+  if (!isNonNegativeFinite(raw.renaissances4) || !Number.isSafeInteger(raw.renaissances4)) return bad("Renaissances IV invalides");
+  if (!isNonNegativeFinite(raw.aiCores) || !Number.isSafeInteger(raw.aiCores)) return bad("AI Cores invalides");
+  if (!isNonNegativeFinite(raw.endings) || !Number.isSafeInteger(raw.endings)) return bad("Fins invalides");
+  for (const [field, ids, label] of [["policies", POLICY_IDS, "Politique"], ["directives", DIRECTIVE_IDS, "Directive"]] as const) {
+    const value = raw[field];
+    if (!isRecord(value)) return bad(`${label}s invalides`);
+    for (const [key, v] of Object.entries(value)) if (!ids.has(key) || v !== true) return bad(`${label} inconnue : ${key}`);
+  }
+  if (
+    !Array.isArray(raw.eraStartedMs) ||
+    raw.eraStartedMs.length < 1 ||
+    raw.eraStartedMs.length > (raw.era as number) || // an era set directly (import, test) may lack its date
+
+    raw.eraStartedMs.some((t) => !isNonNegativeFinite(t))
+  ) {
+    return bad("Dates des ères invalides");
+  }
+  if (!Array.isArray(raw.journal) || raw.journal.length > 50 || raw.journal.some((j) => typeof j !== "string" || !JOURNAL_PATTERN.test(j))) {
+    return bad("Journal invalide");
+  }
+  if (typeof raw.runId !== "string" || !RUN_ID_PATTERN.test(raw.runId)) return bad("Identifiant de partie invalide");
+  if (raw.endedAtMs !== null && !isNonNegativeFinite(raw.endedAtMs)) return bad("Date de fin invalide");
   if (raw.scriptTarget !== null && !BUILDING_IDS.has(raw.scriptTarget as string)) {
     return bad("Cible de script inconnue");
   }
@@ -335,6 +400,15 @@ function validate(raw: Record<string, unknown>): LoadResult {
     renaissances: raw.renaissances as number,
     knowledgePoints: raw.knowledgePoints as number,
     knowledgeBonuses: raw.knowledgeBonuses as Record<string, true>,
+    renaissances4: raw.renaissances4 as number,
+    aiCores: raw.aiCores as number,
+    policies: raw.policies as Record<string, true>,
+    directives: raw.directives as Record<string, true>,
+    eraStartedMs: raw.eraStartedMs as number[],
+    journal: raw.journal as string[],
+    runId: raw.runId as string,
+    endings: raw.endings as number,
+    endedAtMs: raw.endedAtMs as number | null,
   };
   return { ok: true, state };
 }

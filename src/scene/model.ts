@@ -31,7 +31,8 @@ export interface SceneModel {
 
 export const RACKS_CAP = 18;
 export const NODES_CAP = 4;
-export const MACHINES_GOAL = 7e9;
+export { MACHINES_GOAL } from "@/content/era5";
+import { MACHINES_GOAL } from "@/content/era5";
 
 /** How many copies of each building the room can hold before it stops adding more. */
 export const SHOWN_CAP: Record<EraOneBuildingId, number> = {

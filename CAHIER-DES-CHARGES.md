@@ -194,6 +194,17 @@ Décisions de la phase 8 (2026-11-05, à valider) :
 - **3D** : pas de three.js pour l'instant. La Terre est dessinée en 2D, c'est le repli prévu au §13, toujours disponible. Ajouter three.js (environ 600 Ko) reste possible si vous le validez.
 - Animations : chiffre qui rebondit à l'achat, transition d'ère plein écran (3 s, sans bloquer les clics), feuilles qui montent. Tout est coupé par `prefers-reduced-motion`.
 
+Décisions de la phase 9 (2026-11-05, valeurs de départ à valider) :
+
+- Renaissance IV : toutes les améliorations de l'ère IV et 1 million de robots. Elle donne `floor(√gains totaux / 1000)` AI Cores (au moins 1), remet les ères I à IV à zéro et laisse 100 000 machines pour commencer l'ère V.
+- Politiques de civilisation (AI Cores, un achat chacune, 11 au total) : Contrôle ×2, réplication ×1,5, directives −30 %, Contrôle ×3.
+- Ère V : plus de bâtiments ni de clic utile. Les machines se répliquent seules (0,04 % par seconde), le Contrôle vaut `0,5 × log10(1 + machines)²` par seconde. Six directives, dans l'ordre (50 à 400 000 Contrôle), confient chacune une part du monde aux machines (la somme fait 100 %) et accélèrent la réplication. Human Dependency de l'ère V = 1 − automatisation. Pas d'événements aléatoires en ère V.
+- Fin : 7 milliards de machines et 100 % d'automatisation. La partie devient une archive figée (plus de tick, plus d'action). Écran final : dialogue, dates de début des ères (en temps de jeu), premier choix de chaque événement, statistiques, archives, classement.
+- « Nouvelle humanité » : nouvelle partie de zéro, sans bonus. Seules les Human Archives et le nombre de fins restent.
+- Classement : table `run` (début à la première sauvegarde reçue, fin à la première sauvegarde terminée, horloge du serveur). Une durée sous 5 h (la moitié du simulateur, qui finit à 10 h) est gardée mais non classée. Profil : meilleure durée, nombre de fins, date de la première fin, et « Me masquer du classement ». Une humanité commencée en invité compte à partir de la première sauvegarde du compte.
+- Équilibrage : le simulateur finit le jeu à 10 h de jeu actif, loin des 40 à 60 h visées au §2. À régler en phase 10.
+- Deux archives de plus : « Le dernier métier » (moins de 1 %) et « Le dernier humain » (0 %).
+
 ### 5.6 Succès
 
 Catégories : progression, production, découverte, renaissance, collection (Human Archives), narration, défis (par exemple « finir l'ère I sans cliquer après la 10e minute »). Chaque succès donne +1 % de production globale. Quelques-uns débloquent un élément cosmétique (thème de terminal, son de démarrage).
@@ -398,7 +409,7 @@ Une branche et une Pull Request vers `main` par phase. Pas de fusion sans valida
 | 6 | `feat/offline-progress` | Gains hors ligne sur horloge serveur, récapitulatif | Jamais plus de 24 h ; manipuler l'horloge ne rapporte rien. ✅ Code écrit |
 | 7 | `feat/mobile-ui` | Expérience mobile avancée, gestes, performances | Tests Playwright sur 4 tailles ; Lighthouse mobile dans les cibles. ✅ Code écrit (Lighthouse non mesuré) |
 | 8 | `feat/visual-polish` | Thèmes des cinq ères, animations, 3D et repli | 3D facultative, repli 2D testé, 30 images/s minimum sur mobile milieu de gamme. ✅ Code écrit (2D seule, 3D à valider) |
-| 9 | `feat/final-ending` | Renaissance IV (AI Cores, politiques de civilisation), ère V, séquence finale, écran final, archive figée, « Nouvelle humanité », classement | Fin définitive ; classement alimenté par le serveur |
+| 9 | `feat/final-ending` | Renaissance IV (AI Cores, politiques de civilisation), ère V, séquence finale, écran final, archive figée, « Nouvelle humanité », classement | Fin définitive ; classement alimenté par le serveur. ✅ Code écrit |
 | 10 | `chore/stabilize` | Audit de sécurité, tests complets, performances, déploiement Coolify, docs finales | En ligne, tous les tests verts, docs à jour |
 | V2 | — | Google, Discord, anglais | — |
 
