@@ -3,8 +3,11 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { BUILDINGS, UPGRADES } from "@/content/era1";
 import { ACHIEVEMENTS, ARCHIVES } from "@/content/events1";
+import { KNOWLEDGE_BONUSES } from "@/content/knowledge";
 import {
   canBuyUpgrade,
+  canRenaissance,
+  knowledgeGain,
   getEvent,
   humanDependency,
   createInitialState,
@@ -118,6 +121,8 @@ export function GameScreen() {
         <section className={`${styles.window} ${tab === "upgrade" ? styles.active : ""}`} aria-labelledby="w-up">
           <h2 id="w-up" className={styles.windowTitle}>{fr.windows.upgrades}</h2>
           <UpgradeList state={state} onBuy={store.upgrade} />
+          <RenaissancePanel state={state} onRenaissance={store.renaissance} />
+          <KnowledgeTree state={state} onBuy={store.buyKnowledge} />
         </section>
 
         <section className={`${styles.window} ${tab === "archives" ? styles.active : ""}`} aria-labelledby="w-arch">
@@ -223,6 +228,78 @@ function UpgradeRow({ def, state, onBuy }: { def: UpgradeDef; state: GameState; 
         </button>
       </div>
     </li>
+  );
+}
+
+/** Two steps: the player reads what is lost and gained, then confirms. */
+function RenaissancePanel({ state, onRenaissance }: { state: GameState; onRenaissance: () => void }) {
+  const [preparing, setPreparing] = useState(false);
+  const ready = canRenaissance(state);
+  if (!ready && state.renaissances === 0) {
+    return <p className={styles.muted}>{fr.renaissance.locked}</p>;
+  }
+  if (!ready) return null;
+  return (
+    <div className={styles.event}>
+      <h2 className={styles.windowTitle}>{fr.renaissance.title}</h2>
+      <p className={styles.muted}>{t(fr.renaissance.count, { count: state.renaissances })}</p>
+      {!preparing ? (
+        <div className={styles.buyRow}>
+          <button type="button" className={styles.button} onClick={() => setPreparing(true)}>
+            {fr.renaissance.start}
+          </button>
+        </div>
+      ) : (
+        <>
+          <h3 className={styles.itemName}>{fr.renaissance.explainTitle}</h3>
+          <p className={styles.itemText}>{fr.renaissance.lose}</p>
+          <p className={styles.itemText}>{fr.renaissance.keep}</p>
+          <p className={styles.itemText}>{t(fr.renaissance.gain, { points: knowledgeGain(state) })}</p>
+          <div className={styles.buyRow}>
+            <button type="button" className={styles.button} onClick={onRenaissance}>
+              {fr.renaissance.confirm}
+            </button>
+            <button type="button" className={styles.button} onClick={() => setPreparing(false)}>
+              {fr.renaissance.cancel}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function KnowledgeTree({ state, onBuy }: { state: GameState; onBuy: (id: string) => void }) {
+  if (state.renaissances === 0) return null;
+  return (
+    <div className={styles.event}>
+      <h2 className={styles.windowTitle}>{fr.knowledge.title}</h2>
+      <p className={styles.muted}>{t(fr.knowledge.points, { points: state.knowledgePoints })}</p>
+      <ul className={styles.list}>
+        {KNOWLEDGE_BONUSES.map((b) => {
+          const owned = Boolean(state.knowledgeBonuses[b.id]);
+          return (
+            <li key={b.id} className={styles.item}>
+              <div className={styles.itemHead}>
+                <span className={styles.itemName}>{b.name}</span>
+                <span className={styles.muted}>{t(fr.knowledge.cost, { cost: b.cost })}</span>
+              </div>
+              <p className={styles.itemText}>{b.description}</p>
+              <div className={styles.buyRow}>
+                <button
+                  type="button"
+                  className={styles.button}
+                  disabled={owned || state.knowledgePoints < b.cost}
+                  onClick={() => onBuy(b.id)}
+                >
+                  {owned ? fr.knowledge.owned : fr.knowledge.buy}
+                </button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 

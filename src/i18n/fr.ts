@@ -66,6 +66,26 @@ export const fr = {
     locked: "Succès verrouillé",
     bonus: "Chaque succès ajoute 1 % à toute la production et au clic.",
   },
+  renaissance: {
+    title: "Renaissance",
+    locked: "Terminez toutes les améliorations de l'ère I pour ouvrir la renaissance.",
+    start: "Préparer la renaissance",
+    explainTitle: "Ce que vous perdez et ce que vous gagnez",
+    lose: "Perdu : argent, données, bâtiments et améliorations de l'ère I. Le gain total repart de zéro.",
+    keep: "Gardé : succès, Human Archives, bonus de Knowledge.",
+    gain: "Gagné : {points} point(s) de Knowledge, à dépenser dans l'arbre, et l'accès à l'ère II.",
+    confirm: "Confirmer la renaissance",
+    cancel: "Annuler",
+    count: "Renaissances : {count}",
+  },
+  knowledge: {
+    title: "Arbre de Knowledge",
+    points: "Points disponibles : {points}",
+    cost: "{cost} point(s)",
+    buy: "Acquérir",
+    owned: "Acquis",
+    empty: "Une renaissance donne des points à dépenser ici.",
+  },
   scene: {
     label:
       "Votre bureau en 1990 : vous tapez du code devant un écran cathodique. Chaque achat apparaît dans la pièce. Touchez la scène pour taper du code.",
