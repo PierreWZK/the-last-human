@@ -22,8 +22,9 @@ Légende : ✅ fait · 🚧 en cours · ⏳ prévu.
 
 | Fonctionnalité | État |
 |---|---|
-| Ère I jouable (production, achats, améliorations) | ⏳ Phase 1 |
-| Sauvegarde locale versionnée | ⏳ Phase 1 |
+| Ère I jouable (clic, 6 bâtiments, 20 améliorations, événement du bug de l'an 2000) | 🚧 Phase 1, à valider |
+| Sauvegarde locale versionnée, refus des données illisibles | 🚧 Phase 1, à valider |
+| Responsive : un panneau à la fois sous 900 px, trois panneaux au-delà | 🚧 Phase 1, à valider |
 | Économie longue, multiplicateurs, déblocages | ⏳ Phase 2 |
 | Événements, Human Dependency, Human Archives, succès | ⏳ Phase 3 |
 | Renaissances (Knowledge, Algorithms, Neural Cores, AI Cores) | ⏳ Phase 4 |
@@ -44,8 +45,8 @@ Légende : ✅ fait · 🚧 en cours · ⏳ prévu.
 | État de l'interface | Store maison exposé par `useSyncExternalStore` |
 | Base de données | PostgreSQL + Prisma |
 | Authentification | Better Auth (pseudo ou email + mot de passe) |
-| Textes et formats | `next-intl` (français en V1), `Intl` pour les nombres et les dates |
-| Styles | CSS Modules + variables CSS, un thème par ère |
+| Textes | Un module `src/i18n/fr.ts` (français) ; `next-intl` reste prévu pour l'anglais |
+| Styles | CSS Modules + variables CSS (`globals.css`), un thème par ère, direction « Le Poste » en ère I |
 | Animations | CSS, `motion` seulement si nécessaire |
 | 3D | three.js chargé à la demande, avec repli 2D |
 | Tests | Vitest (moteur, économie, sauvegardes), Playwright (parcours, mobile) |
@@ -58,13 +59,12 @@ Légende : ✅ fait · 🚧 en cours · ⏳ prévu.
 
 ## Installation locale
 
-> Le code arrive avec la phase 1. Les commandes ci-dessous sont celles qui seront en place.
-
 ```bash
 npm install
-cp .env.example .env
 npm run dev                  # http://localhost:3000
 ```
+
+Aucune variable d'environnement n'est nécessaire avant la phase 5.
 
 ## Variables d'environnement
 
@@ -80,11 +80,11 @@ Le fichier `.env` n'est jamais versionné. La liste complète sera dans `.env.ex
 
 ```bash
 npm run dev          # développement
-npm test             # tests unitaires (Vitest)
-npm run test:e2e     # parcours complets (Playwright, desktop et mobile)
-npm run sim          # simulateur d'équilibrage : joue la partie en accéléré, sans interface
+npm test             # tests unitaires du moteur et des sauvegardes (Vitest)
+npm run test:e2e     # parcours complets sur 4 largeurs (Playwright : 360, 390, 768, 1440 px)
 npm run build        # build de production
 npm start            # lance le build
+NEXT_OUTPUT=standalone npm run build   # build pour l'image Docker
 ```
 
 ## Déploiement sur Coolify
@@ -99,15 +99,15 @@ npm start            # lance le build
 
 ```
 src/
-  game/        moteur pur : état, tick, économie, contenus, sauvegarde, migrations
-  content/     données du jeu : bâtiments, améliorations, événements, textes narratifs
-  app/         routes Next.js (pages et API)
-  ui/          composants React, thèmes par ère
-  i18n/        messages (fr) et formats
-  server/      auth, accès base, validation des sauvegardes
-tests/         Vitest (moteur) et Playwright (e2e)
-scripts/sim/   simulateur d'équilibrage
+  game/        moteur pur (engine, types, save, store, décimaux) + tests Vitest
+  content/     données de l'ère I : bâtiments, améliorations, événement
+  app/         page et layout Next.js, styles globaux
+  components/  interface de jeu (GameScreen) et ses styles
+  i18n/        textes en français
+tests/e2e/     parcours Playwright
 ```
+
+Pas encore en place : `scripts/sim/` (phase 2), authentification et base de données (phase 5), `server/` (phase 5).
 
 Trois principes :
 
@@ -118,6 +118,6 @@ Trois principes :
 ## Contribuer
 
 - Pas de développement sur `main` : une branche par phase (`feat/...`) et une Pull Request vers `main`.
-- Avant chaque PR : `npm test`, `npm run test:e2e` et `npm run build` doivent passer, avec le simulateur dans les cibles du cahier des charges.
-- Aucun texte écrit en dur dans les composants : tout passe par `src/i18n`.
+- Avant chaque PR : `npm test`, `npm run test:e2e` et `npm run build` doivent passer.
+- Aucun texte écrit en dur dans les composants : tout passe par `src/i18n/fr.ts`.
 - Toute modification du format de sauvegarde incrémente `schemaVersion` et ajoute une migration testée.
