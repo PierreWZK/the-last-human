@@ -1,4 +1,5 @@
 import type { BuildingId, EraOneBuildingId } from "@/game/types";
+import { drawEraScene } from "./eras";
 import type { SceneModel } from "./model";
 
 /**
@@ -85,6 +86,11 @@ function rect(ctx: CanvasRenderingContext2D, color: string, x: number, y: number
 
 export function drawScene(ctx: CanvasRenderingContext2D, model: SceneModel, fx: SceneFx, now: number): void {
   ctx.imageSmoothingEnabled = false;
+  if (model.era >= 2) {
+    drawEraScene(ctx, model, now);
+    drawFloats(ctx, fx, now);
+    return;
+  }
   drawRoom(ctx);
   drawServerRack(ctx, model, now);
   drawWallPages(ctx, model);

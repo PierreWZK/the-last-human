@@ -16,7 +16,22 @@ export interface SceneModel {
   y2kOpen: boolean;
   /** The « ignore » slowdown is running. */
   slowed: boolean;
+  /** Current era: era I draws the room, later eras their own scene (src/scene/eras.ts). */
+  era: number;
+  /** Era II: racks drawn in the datacenter (one per era II building, capped). */
+  racks: number;
+  scripts: boolean;
+  robotArm: boolean;
+  /** Era III: extra nodes of the network (one per model, capped). */
+  nodes: number;
+  training: boolean;
+  /** Eras IV–V: share of the globe covered by machines, 0 to 1, on a log scale up to 7 billion. */
+  density: number;
 }
+
+export const RACKS_CAP = 18;
+export const NODES_CAP = 4;
+export const MACHINES_GOAL = 7e9;
 
 /** How many copies of each building the room can hold before it stops adding more. */
 export const SHOWN_CAP: Record<EraOneBuildingId, number> = {
@@ -51,5 +66,15 @@ export function sceneModel(state: GameState): SceneModel {
     automated: ids.some((id) => state.buildings[id] > 0),
     y2kOpen: state.event.status === "open" && state.event.id === "y2k",
     slowed: state.effects.length > 0,
+    era: state.era,
+    racks: Math.min(
+      RACKS_CAP,
+      state.buildings.dataCollector + state.buildings.database + state.buildings.cloudCluster + state.buildings.datacenter,
+    ),
+    scripts: state.buildings.buyScript > 0,
+    robotArm: state.buildings.robotArm > 0,
+    nodes: Math.min(NODES_CAP, state.models.length),
+    training: state.training !== null,
+    density: Math.min(1, Math.log10(1 + state.resources.robots.toNumber()) / Math.log10(MACHINES_GOAL)),
   };
 }

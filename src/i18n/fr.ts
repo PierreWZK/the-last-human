@@ -199,6 +199,12 @@ export const fr = {
   scene: {
     label:
       "Votre bureau en 1990 : vous tapez du code devant un écran cathodique. Chaque achat apparaît dans la pièce. Touchez la scène pour taper du code.",
+    labels: {
+      2: "Une allée de datacenter : chaque bâtiment ajoute une baie, les scripts circulent seuls. Touchez la scène pour taper du code.",
+      3: "Un réseau de neurones : chaque modèle entraîné ajoute des nœuds. Touchez la scène pour taper du code.",
+      4: "La Terre se couvre de machines : chaque point est une part des robots. Touchez la scène pour taper du code.",
+      5: "La Terre, couverte de machines, et une seule personne debout dessus.",
+    },
   },
   footer: "Sans compte, tout se sauvegarde dans ce navigateur. Avec un compte, la partie suit d'un appareil à l'autre.",
 } as const;

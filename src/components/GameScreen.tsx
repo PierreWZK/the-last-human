@@ -83,6 +83,11 @@ export function GameScreen() {
     return () => store.stop();
   }, [store]);
 
+  // Era theme on <html> (cahier §14): the whole page, background included, changes era.
+  useEffect(() => {
+    document.documentElement.dataset.era = String(state.era);
+  }, [state.era]);
+
   const rates = productionPerSecond(state);
   const swipe = useSwipe(tab, setTab);
   const pinned = (["money", "data", "compute", "intelligence", "robots"] as const).filter(
@@ -106,6 +111,8 @@ export function GameScreen() {
 
       <CloudBanner />
 
+      <EraTransition era={state.era} />
+
       {offline && <OfflineRecap report={offline} onClose={store.dismissOffline} />}
 
       <p className={styles.pinned} aria-hidden="true">
@@ -128,7 +135,7 @@ export function GameScreen() {
         ))}
       </nav>
 
-      <Scene className={tab === "produce" ? "" : styles.offTab} />
+      <Scene className={tab === "produce" ? "" : styles.offTab} era={state.era} />
 
       <div className={styles.grid} data-tab={tab} {...swipe}>
         <section className={`${styles.window} ${tab === "produce" ? styles.active : ""}`} aria-labelledby="w-res">
@@ -261,6 +268,27 @@ export function GameScreen() {
   );
 }
 
+/** A scripted era change: the new era's name fades in over the page, then leaves. Not on first load. */
+function EraTransition({ era }: { era: GameState["era"] }) {
+  const previous = useRef(era);
+  const [shown, setShown] = useState<GameState["era"] | null>(null);
+  useEffect(() => {
+    if (previous.current === era) return;
+    previous.current = era;
+    setShown(era);
+    const timer = setTimeout(() => setShown(null), 3200);
+    return () => clearTimeout(timer);
+  }, [era]);
+  if (shown === null) return null;
+  return (
+    <div className={styles.eraTransition} role="status">
+      <p className={styles.eraTransitionYears}>{fr.eras[shown].years}</p>
+      {/* Only the era's own title: the full « Ère II · … » label stays in the header. */}
+      <p className={styles.eraTransitionName}>{fr.eras[shown].name.split(" · ")[1]}</p>
+    </div>
+  );
+}
+
 /** Recap of an absence (cahier §6): how long, what was produced, what was reached. */
 function OfflineRecap({ report, onClose }: { report: OfflineReport; onClose: () => void }) {
   const lines = RESOURCE_IDS.filter((r) => report.produced[r].gt(0)).map((r) =>
@@ -322,7 +350,8 @@ function BuildingRow({
       <div className={styles.itemHead}>
         <span className={styles.itemName}>{def.name}</span>
         <span className={styles.muted}>
-          {owned} {fr.buildings.owned}
+          {/* The key remounts the number on each purchase: a short bump says « bought ». */}
+          <span key={owned} className={owned > 0 ? styles.bump : ""}>{owned}</span> {fr.buildings.owned}
         </span>
       </div>
       <p className={styles.itemText}>{def.description}</p>

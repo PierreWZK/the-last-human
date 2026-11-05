@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createInitialState, resolveY2K } from "@/game/engine";
-import { SHOWN_CAP, sceneModel, tierFor } from "./model";
+import { D } from "@/game/decimal";
+import { NODES_CAP, RACKS_CAP, SHOWN_CAP, sceneModel, tierFor } from "./model";
 
 describe("modèle de scène", () => {
   it("les paliers suivent 1, 10, 25 et 50 exemplaires", () => {
@@ -28,5 +29,19 @@ describe("modèle de scène", () => {
     const ignored = sceneModel(resolveY2K(open, "ignore"));
     expect(ignored.y2kOpen).toBe(false);
     expect(ignored.slowed).toBe(true);
+  });
+
+  it("les ères suivantes ont leur propre scène : racks, réseau, densité de machines", () => {
+    const s = createInitialState();
+    const era2 = sceneModel({ ...s, era: 2, buildings: { ...s.buildings, database: 30, buyScript: 1 } });
+    expect(era2.era).toBe(2);
+    expect(era2.racks).toBe(RACKS_CAP);
+    expect(era2.scripts).toBe(true);
+    const era3 = sceneModel({ ...s, era: 3, models: [1, 1, 1, 1, 1, 1] });
+    expect(era3.nodes).toBe(NODES_CAP);
+    const empty = sceneModel({ ...s, era: 4 });
+    expect(empty.density).toBe(0);
+    const full = sceneModel({ ...s, era: 4, resources: { ...s.resources, robots: D(7e9) } });
+    expect(full.density).toBeCloseTo(1, 5);
   });
 });

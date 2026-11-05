@@ -432,3 +432,63 @@
     display: grid;
   }
 }
+
+/* Phase 8 : retours visuels. Transformations et opacité seulement (composition GPU). */
+.bump {
+  display: inline-block;
+  animation: bump 260ms ease-out;
+}
+
+@keyframes bump {
+  40% {
+    transform: scale(1.35);
+  }
+}
+
+.eraTransition {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-content: center;
+  gap: var(--space-3);
+  text-align: center;
+  background: var(--ink);
+  pointer-events: none;
+  animation: eraFade 3200ms ease-in-out forwards;
+}
+
+.eraTransitionYears {
+  color: var(--phosphor-dim);
+  font-size: var(--text-md);
+  letter-spacing: 0.2em;
+  font-variant-numeric: tabular-nums;
+}
+
+.eraTransitionName {
+  color: var(--phosphor);
+  font-size: var(--text-xl);
+  letter-spacing: 0.06em;
+}
+
+@keyframes eraFade {
+  0% {
+    opacity: 0;
+  }
+  20%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Era V empties the interface: secondary texts fade back, lots of room around everything. */
+.screen[data-era="5"] {
+  gap: var(--space-6);
+}
+
+.screen[data-era="5"] .window {
+  background: transparent;
+}
