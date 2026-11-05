@@ -139,20 +139,20 @@ describe("événement : le bug de l'an 2000", () => {
   });
 
   it("corriger coûte 1 500 et déduit l'argent", () => {
-    const open = { ...withMoney(createInitialState(), 2000), event: { status: "open" as const } };
+    const open = { ...withMoney(createInitialState(), 2000), event: { status: "open" as const, id: "y2k" } };
     const fixed = resolveY2K(open, "patch");
-    expect(fixed.event).toEqual({ status: "resolved", choice: "patch" });
+    expect(fixed.event).toEqual({ status: "resolved", id: "y2k", choice: "patch" });
     expect(fixed.resources.money.toNumber()).toBe(500);
   });
 
   it("corriger est impossible sans les fonds", () => {
-    const open = { ...withMoney(createInitialState(), 100), event: { status: "open" as const } };
+    const open = { ...withMoney(createInitialState(), 100), event: { status: "open" as const, id: "y2k" } };
     expect(resolveY2K(open, "patch")).toBe(open);
   });
 
   it("ignorer divise la production par deux pendant 120 s de jeu, puis l'effet expire", () => {
     const base = createInitialState();
-    const open = { ...base, buildings: { ...base.buildings, homePage: 9 }, event: { status: "open" as const } };
+    const open = { ...base, buildings: { ...base.buildings, homePage: 9 }, event: { status: "open" as const, id: "y2k" } };
     const ignored = resolveY2K(open, "ignore");
     expect(productionPerSecond(ignored).money.toNumber()).toBeCloseTo(0.9, 6);
     const later = tick(ignored, 120_000);

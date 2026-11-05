@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { BUILDINGS, UPGRADES, Y2K_PATCH_COST } from "@/content/era1";
+import { BUILDINGS, UPGRADES } from "@/content/era1";
+import { ACHIEVEMENTS, ARCHIVES } from "@/content/events1";
 import {
   canBuyUpgrade,
+  getEvent,
+  humanDependency,
   createInitialState,
   getBuilding,
   manualGain,
@@ -18,12 +21,13 @@ import {
 } from "@/game/engine";
 import { formatNumber } from "@/game/decimal";
 import { getStore, type StoreSnapshot } from "@/game/store";
-import type { BuildingDef, BuildingId, GameState, UpgradeDef } from "@/game/types";
+import type { BuildingDef, BuildingId, EventEffect, GameState, UpgradeDef } from "@/game/types";
 import { fr, t } from "@/i18n/fr";
+import { ZERO } from "@/game/decimal";
 import styles from "./GameScreen.module.css";
 import { Scene } from "./Scene";
 
-type Tab = "produce" | "buy" | "upgrade";
+type Tab = "produce" | "buy" | "upgrade" | "archives";
 
 const SERVER_SNAPSHOT: StoreSnapshot = { state: createInitialState(), notice: null, clicks: 0 };
 
@@ -55,7 +59,7 @@ export function GameScreen() {
       )}
 
       <nav className={styles.tabs} aria-label="Sections">
-        {(["produce", "buy", "upgrade"] as const).map((key) => (
+        {(["produce", "buy", "upgrade", "archives"] as const).map((key) => (
           <button
             key={key}
             type="button"
@@ -88,6 +92,9 @@ export function GameScreen() {
           <p className={styles.muted}>
             {fr.resources.totalMoney} : {formatNumber(state.totalMoney)}
           </p>
+          <p className={styles.muted}>
+            {t(fr.human.gauge, { percent: Math.round(humanDependency(state) * 100) })}
+          </p>
 
           <h2 className={styles.windowTitle}>{fr.windows.manual}</h2>
           <button type="button" className={styles.manual} onClick={store.click}>
@@ -96,7 +103,7 @@ export function GameScreen() {
           <p className={styles.muted}>{t(fr.manual.gain, { amount: formatNumber(manualGain(state)) })}</p>
           <p className={styles.muted}>{fr.manual.hint}</p>
 
-          {state.event.status !== "pending" && <EventWindow state={state} onAnswer={store.answerY2K} />}
+          <EventWindow state={state} onAnswer={store.answerEvent} />
         </section>
 
         <section className={`${styles.window} ${tab === "buy" ? styles.active : ""}`} aria-labelledby="w-buy">
@@ -111,6 +118,11 @@ export function GameScreen() {
         <section className={`${styles.window} ${tab === "upgrade" ? styles.active : ""}`} aria-labelledby="w-up">
           <h2 id="w-up" className={styles.windowTitle}>{fr.windows.upgrades}</h2>
           <UpgradeList state={state} onBuy={store.upgrade} />
+        </section>
+
+        <section className={`${styles.window} ${tab === "archives" ? styles.active : ""}`} aria-labelledby="w-arch">
+          <h2 id="w-arch" className={styles.windowTitle}>{fr.archives.title}</h2>
+          <ArchivesPanel state={state} />
         </section>
       </div>
 
@@ -230,31 +242,77 @@ function requirementText(def: UpgradeDef): string {
   return "";
 }
 
-function EventWindow({ state, onAnswer }: { state: GameState; onAnswer: (c: "patch" | "ignore") => void }) {
+/** What an event choice costs in money (the sum of its spend effects). */
+function spendOf(effects: EventEffect[]) {
+  return effects.reduce((acc, e) => (e.kind === "spend" ? acc.add(e.amount) : acc), ZERO);
+}
+
+function EventWindow({ state, onAnswer }: { state: GameState; onAnswer: (choiceId: string) => void }) {
   const money = state.resources.money;
-  const open = state.event.status === "open";
-  const slowed = state.effects.length > 0;
+  if (state.event.status === "pending") return null;
+  const def = getEvent(state.event.id);
+  if (!def) return null;
+
+  if (state.event.status === "resolved") {
+    const chosenId = state.event.status === "resolved" ? state.event.choice : "";
+    const chosen = def.choices.find((c) => c.id === chosenId);
+    return (
+      <div className={styles.event}>
+        <h2 className={styles.windowTitle}>{def.title}</h2>
+        <p className={styles.muted}>{t(fr.event.chosen, { label: chosen?.label ?? "" })}</p>
+      </div>
+    );
+  }
+
+  const slowed = state.effects.some((e) => e.kind === "slowdown");
   return (
-    <div className={styles.event} role={open ? "alertdialog" : undefined} aria-labelledby="ev-title">
-      <h2 id="ev-title" className={styles.windowTitle}>{fr.event.y2kTitle}</h2>
-      {open ? (
-        <>
-          <p className={styles.itemText}>{fr.event.y2kText}</p>
-          <div className={styles.buyRow}>
-            <button type="button" className={styles.button} disabled={money.lt(Y2K_PATCH_COST)} onClick={() => onAnswer("patch")}>
-              {t(fr.event.patch, { amount: formatNumber(Y2K_PATCH_COST) })}
-            </button>
-            <button type="button" className={styles.button} onClick={() => onAnswer("ignore")}>
-              {fr.event.ignore}
-            </button>
-          </div>
-        </>
-      ) : (
-        <p className={styles.muted}>
-          {state.event.status === "resolved" && state.event.choice === "patch" ? fr.event.patched : fr.event.ignored}
-        </p>
-      )}
+    <div className={styles.event} role="alertdialog" aria-labelledby="ev-title">
+      <h2 id="ev-title" className={styles.windowTitle}>{def.title}</h2>
+      <p className={styles.itemText}>{def.text}</p>
+      <div className={styles.buyRow}>
+        {def.choices.map((choice) => (
+          <button
+            key={choice.id}
+            type="button"
+            className={styles.button}
+            disabled={money.lt(spendOf(choice.effects))}
+            onClick={() => onAnswer(choice.id)}
+          >
+            {choice.label}
+          </button>
+        ))}
+      </div>
       {slowed && <p className={styles.muted}>{fr.event.slowdown}</p>}
     </div>
+  );
+}
+
+function ArchivesPanel({ state }: { state: GameState }) {
+  const unlocked = Object.keys(state.achievements).length;
+  return (
+    <>
+      <p className={styles.muted}>{t(fr.archives.count, { count: Object.keys(state.archives).length, total: ARCHIVES.length })}</p>
+      <ul className={styles.list}>
+        {ARCHIVES.map((a) => {
+          const open = Boolean(state.archives[a.id]);
+          return (
+            <li key={a.id} className={styles.item}>
+              <span className={styles.itemName}>{open ? a.title : fr.archives.locked}</span>
+              {open && <p className={styles.itemText}>{a.text}</p>}
+            </li>
+          );
+        })}
+      </ul>
+      <h2 className={styles.windowTitle}>{fr.achievements.title}</h2>
+      <p className={styles.muted}>{t(fr.achievements.count, { count: unlocked, total: ACHIEVEMENTS.length })}</p>
+      <ul className={styles.list}>
+        {ACHIEVEMENTS.map((a) => (
+          <li key={a.id} className={styles.item}>
+            <span className={styles.itemName}>{state.achievements[a.id] ? a.title : fr.achievements.locked}</span>
+          </li>
+        ))}
+      </ul>
+      <p className={styles.muted}>{fr.achievements.bonus}</p>
+    </>
   );
 }

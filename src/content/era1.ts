@@ -15,9 +15,9 @@ export const TUNING = {
   /** Cost growth per extra building owned. */
   buildingGrowth: 1.2,
   /** Multiplies every upgrade cost and every "total money" requirement. */
-  upgradeCostScale: 15,
+  upgradeCostScale: 17,
   /** Multiplies the "total money earned" requirements, separately from the costs. */
-  requirementScale: 15,
+  requirementScale: 17,
 };
 
 const RAW_BUILDINGS: BuildingDef[] = [
@@ -139,7 +139,3 @@ export const UPGRADES: UpgradeDef[] = RAW_UPGRADES.map((u) => ({
 /** Paliers par bâtiment : chaque seuil atteint double la production de ce bâtiment. */
 export const MILESTONES = [10, 25, 50, 100, 250, 500, 1000];
 
-/** Événement de l'ère I : le bug de l'an 2000. Déclenché une seule fois. */
-export const Y2K_TRIGGER_MONEY = D(5000);
-export const Y2K_PATCH_COST = D(1500);
-export const Y2K_SLOWDOWN = { factor: 0.5, durationMs: 120_000 };

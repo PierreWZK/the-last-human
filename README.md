@@ -27,7 +27,7 @@ Légende : ✅ fait · 🚧 en cours · ⏳ prévu.
 | Responsive : un panneau à la fois sous 900 px, trois panneaux au-delà | ✅ Phase 1 |
 | Scène pixel art : le personnage tape au clic, chaque bâtiment apparaît dans la pièce | 🚧 À valider |
 | Économie longue, multiplicateurs, déblocages | ⏳ Phase 2 |
-| Événements, Human Dependency, Human Archives, succès | ⏳ Phase 3 |
+| Événements à choix (aléatoires à graine), Human Dependency, 6 Human Archives, 7 succès | ✅ Phase 3 (PR en revue) |
 | Renaissances (Knowledge, Algorithms, Neural Cores, AI Cores) | ⏳ Phase 4 |
 | Comptes (pseudo ou email + mot de passe), sauvegarde cloud | ⏳ Phase 5 |
 | Gains hors ligne (24 h maximum, horloge serveur) | ⏳ Phase 6 |

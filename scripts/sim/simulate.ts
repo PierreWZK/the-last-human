@@ -5,7 +5,7 @@
  *  - active play: never more than 30 minutes without something new.
  * Run with `npm run sim`. Exits with code 1 when an active-play target is missed.
  */
-import { BUILDINGS, MILESTONES, UPGRADES, Y2K_PATCH_COST } from "@/content/era1";
+import { BUILDINGS, MILESTONES, UPGRADES } from "@/content/era1";
 import {
   buyBuilding,
   buyUpgrade,
@@ -16,11 +16,12 @@ import {
   multiplier,
   productionPerSecond,
   quote,
-  resolveY2K,
+  getEvent,
+  resolveEvent,
   synergyBonus,
   tick,
 } from "@/game/engine";
-import { formatNumber } from "@/game/decimal";
+import { ZERO, formatNumber } from "@/game/decimal";
 import type { BuildingId, GameState } from "@/game/types";
 
 export interface Unlock {
@@ -87,8 +88,14 @@ export function simulate({ hours, clicksPerSecond }: SimOptions): SimResult {
  */
 function decide(state: GameState): GameState {
   if (state.event.status === "open") {
-    const answer = state.resources.money.gte(Y2K_PATCH_COST) ? "patch" : "ignore";
-    return resolveY2K(state, answer);
+    // Events list their choices in the order a careful player prefers; take the first affordable one.
+    const def = getEvent(state.event.id)!;
+    const choice =
+      def.choices.find((c) => {
+        const spend = c.effects.reduce((acc, e) => (e.kind === "spend" ? acc.add(e.amount) : acc), ZERO);
+        return state.resources.money.gte(spend);
+      }) ?? def.choices[def.choices.length - 1];
+    return resolveEvent(state, choice.id);
   }
 
   const affordableUpgrade = UPGRADES.filter((u) => canBuyUpgrade(state, u.id)).sort((a, b) =>
@@ -181,10 +188,8 @@ function report(label: string, result: SimResult, hours: number): boolean {
     return true;
   }
   const eraHours = result.eraDoneMinute === null ? Infinity : result.eraDoneMinute / 60;
-  const ok = medianFirstHour >= 2 && medianFirstHour <= 5 && eraHours >= 6 && eraHours <= 10;
-  console.log(ok ? "→ cibles atteintes (rythme 2–5 min, ère I entre 6 et 10 h)" : "→ cibles NON atteintes (rythme 2–5 min, ère I entre 6 et 10 h)");
-  // Decision of 2026-11-05: the 30-minute rule waits for the events of phase 3. Reported, not enforced yet.
-  if (maxGap > 30) console.log(`→ écart de ${maxGap.toFixed(0)} min > 30 : reporté à la phase 3 (événements)`);
+  const ok = medianFirstHour >= 2 && medianFirstHour <= 5 && eraHours >= 6 && eraHours <= 10 && maxGap <= 30;
+  console.log(ok ? "→ cibles atteintes" : "→ cibles NON atteintes (rythme 2–5 min, ère I entre 6 et 10 h, écart ≤ 30 min)");
   return ok;
 }
 

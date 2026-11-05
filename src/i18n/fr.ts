@@ -4,7 +4,7 @@ export const fr = {
   era: "Ère I · The Digital Age",
   years: "1990–2005",
   notice: "Notice",
-  tabs: { produce: "Produire", buy: "Acheter", upgrade: "Améliorer" },
+  tabs: { produce: "Produire", buy: "Acheter", upgrade: "Améliorer", archives: "Archives" },
   windows: {
     resources: "Ressources",
     manual: "Travail manuel",
@@ -42,6 +42,7 @@ export const fr = {
     requirementTotal: "{amount} gagnés au total",
   },
   event: {
+    chosen: "Votre choix : {label}",
     y2kTitle: "Le bug de l'an 2000",
     y2kText:
       "Les vieux programmes lisent l'année sur deux chiffres. À minuit, les dates vont revenir en 1900. Corriger coûte cher ; ne rien faire, c'est ralentir toute la production le temps que ça dure.",
@@ -50,6 +51,20 @@ export const fr = {
     patched: "Corrigé. Les systèmes ont passé la nuit sans incident.",
     ignored: "Ignoré. Le ralentissement dure deux minutes de jeu.",
     slowdown: "Ralentissement en cours",
+  },
+  human: {
+    gauge: "Part du travail encore faite par des humains : {percent} %",
+  },
+  archives: {
+    title: "Archives humaines",
+    count: "{count} / {total} fragments retrouvés",
+    locked: "Fragment verrouillé",
+  },
+  achievements: {
+    title: "Succès",
+    count: "{count} / {total} débloqués",
+    locked: "Succès verrouillé",
+    bonus: "Chaque succès ajoute 1 % à toute la production et au clic.",
   },
   scene: {
     label:

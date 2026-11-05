@@ -23,7 +23,7 @@ describe("modèle de scène", () => {
   });
 
   it("reflète l'événement de l'an 2000 et son ralentissement", () => {
-    const open = { ...createInitialState(), event: { status: "open" as const } };
+    const open = { ...createInitialState(), event: { status: "open" as const, id: "y2k" } };
     expect(sceneModel(open).y2kOpen).toBe(true);
     const ignored = sceneModel(resolveY2K(open, "ignore"));
     expect(ignored.y2kOpen).toBe(false);

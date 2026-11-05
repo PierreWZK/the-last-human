@@ -1,5 +1,5 @@
 import { BACKUP_KEY, SAVE_KEY, deserialize, serialize } from "./save";
-import { clickManual, buyBuilding, buyUpgrade, createInitialState, resolveY2K, tick, type BuyMode } from "./engine";
+import { clickManual, buyBuilding, buyUpgrade, createInitialState, resolveEvent, tick, type BuyMode } from "./engine";
 import type { BuildingId, GameState } from "./types";
 
 /**
@@ -80,7 +80,7 @@ export class GameStore {
 
   upgrade = (id: string): void => this.update((s) => buyUpgrade(s, id));
 
-  answerY2K = (choice: "patch" | "ignore"): void => this.update((s) => resolveY2K(s, choice));
+  answerEvent = (choiceId: string): void => this.update((s) => resolveEvent(s, choiceId));
 
   /** Writes the current state to localStorage. Never overwrites a save it cannot read. */
   save = (): void => {
@@ -114,9 +114,9 @@ export class GameStore {
   }
 
   private load(): StoreSnapshot {
-    if (!this.storage) return { state: createInitialState(), notice: null, clicks: 0 };
+    if (!this.storage) return { state: newGame(), notice: null, clicks: 0 };
     const raw = this.storage.getItem(SAVE_KEY);
-    if (raw === null) return { state: createInitialState(), notice: null, clicks: 0 };
+    if (raw === null) return { state: newGame(), notice: null, clicks: 0 };
     const result = deserialize(raw);
     if (result.ok) return { state: result.state, notice: null, clicks: 0 };
     // Unreadable save: keep a copy, then start fresh. Never overwrite silently.
@@ -131,6 +131,11 @@ export class GameStore {
       notice: `La sauvegarde n'a pas pu être lue (${result.reason}). Une copie a été conservée.`,
     };
   }
+}
+
+/** A new game gets a fresh random seed, so random events differ between players. */
+function newGame() {
+  return createInitialState(Math.floor(Math.random() * 2 ** 31) + 1);
 }
 
 /** Shared instance for the browser. Created lazily so that the server never touches storage. */

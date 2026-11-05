@@ -1,7 +1,7 @@
 import type Decimal from "break_infinity.js";
 
 /** Version of the save format. Bump it with a migration when GameState changes shape. */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export type ResourceId = "money" | "data";
 
@@ -41,6 +41,37 @@ export type UpgradeRequirement =
   | { kind: "owned"; building: BuildingId; count: number }
   | { kind: "totalMoney"; amount: Decimal };
 
+/** What a choice does when the player takes it. */
+export type EventEffect =
+  | { kind: "spend"; amount: Decimal }
+  /** Money equal to `seconds` of current production (at least 10). */
+  | { kind: "gain"; seconds: number }
+  | { kind: "timed"; effect: "slowdown" | "boost"; factor: number; durationMs: number };
+
+export interface EventChoice {
+  id: string;
+  label: string;
+  effects: EventEffect[];
+}
+
+export interface EventDef {
+  id: string;
+  title: string;
+  text: string;
+  choices: EventChoice[];
+}
+
+export interface TimedEffect {
+  kind: "slowdown" | "boost";
+  factor: number;
+  untilMs: number;
+}
+
+export type EventState =
+  | { status: "pending" }
+  | { status: "open"; id: string }
+  | { status: "resolved"; id: string; choice: string };
+
 export interface GameState {
   schemaVersion: number;
   /** Time played, in milliseconds (game time, not wall-clock). */
@@ -48,14 +79,22 @@ export interface GameState {
   resources: Record<ResourceId, Decimal>;
   /** Lifetime money earned, used for unlock thresholds. */
   totalMoney: Decimal;
+  /** Manual clicks, lifetime. */
+  totalClicks: number;
   buildings: Record<BuildingId, number>;
   upgrades: Record<string, true>;
+  /** Current event (the scripted « bug de l'an 2000 » or a random one). */
   event: EventState;
+  /** Number of events answered, lifetime. */
+  eventsResolved: number;
   /** Timed effects, measured in game time. */
-  effects: Array<{ kind: "slowdown"; factor: number; untilMs: number }>;
+  effects: TimedEffect[];
+  /** Seed of the random generator. Stored so that a save replays the same draws. */
+  rngSeed: number;
+  /** Game time at which the next random event may open. */
+  nextEventAtMs: number;
+  /** Unlocked Human Archives (fragments). */
+  archives: Record<string, true>;
+  /** Unlocked achievements. */
+  achievements: Record<string, true>;
 }
-
-export type EventState =
-  | { status: "pending" }
-  | { status: "open" }
-  | { status: "resolved"; choice: "patch" | "ignore" };
