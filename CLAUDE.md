@@ -13,12 +13,13 @@
 - [x] Tests E2E des phases 1 à 4 ter : 40 verts sur 4 largeurs
 - [x] README et CAHIER-DES-CHARGES mis à jour pour la phase 5, `.env.example` ajouté
 
-### Session du 2026-11-05 (J22 #2) — branches empilées, rien de poussé
-- PR ouvertes : #8 (phase 5, base main), #9 (phase 6), #10 (phase 7), #11 (phase 8), #12 (phase 9). Chaque PR a pour base la précédente. Aucune fusionnée.
-- Tests : 145 Vitest verts, 68 E2E verts sur 4 largeurs, simulateur OK (fin du jeu à 10 h), lint et typage propres.
-- Fichiers parasites de `prisma init` exclus via `.git/info/exclude` (non supprimés).
-- À valider par l'utilisateur : 3D (non ajoutée, Terre en 2D), valeurs de l'ère V, durée minimale du classement (5 h), « Me masquer du classement ».
-- Reste : validation manuelle, équilibrage (10 h au lieu de 40 à 60 h), Lighthouse jamais mesuré, phase 10.
+### Mise en ligne (2026-11-06)
+- PR #8 à #13 fusionnées dans `main` (phases 5 à 9, plus `public/robots.txt` pour le Dockerfile).
+- En ligne : https://thelasthuman.projectp.fr (Coolify, suit `main`, déploiement par API avec `COOLIFY_URL` / `COOLIFY_TOKEN`).
+- Coolify : projet `3yyirs89ghfas0kxefn1wdie`, application `93iarcbnw0pjl8w8dqc1i8id`, base PostgreSQL `9cncziz9dffgahqvtyrsvui1`. Variables en runtime seulement : `DATABASE_URL` (URL interne), `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`.
+- Healthcheck : `/api/health` sur `127.0.0.1:3000`, délai de démarrage 30 s (`localhost` se résout en IPv6 dans l'image alpine : connexion refusée).
+- Compte de test créé en production pendant la vérification : `smokeb39105d5` (à supprimer).
+- Reste : validation des valeurs (3D, ère V, durée minimale 5 h), équilibrage (10 h au lieu de 40 à 60 h), Lighthouse, SEO du §18 (sitemap, OG, JSON-LD), vitrine 30days30projects, phase 10.
 
 ### Phases suivantes
 - [ ] Phase 6 : gains hors ligne (24 h max, horloge serveur), récapitulatif
@@ -26,7 +27,7 @@
 - [ ] Phase 8 : thèmes des cinq ères, animations, 3D facultative, scène pour les ères II à IV
 - [ ] Phase 9 : renaissance IV (AI Cores, politiques de civilisation), ère V, fin, classement
 - [ ] Équilibrage des ères II à IV (le simulateur atteint l'ère IV à 8,5 h ; l'ère IV dépasse 7 milliards de robots)
-- [ ] Docker : image jamais testée (pas de Docker en local)
+- [x] Docker : image construite et déployée sur Coolify
 - [ ] V2 : connexion Google et Discord
 
 ## Règles de travail (rappel de l'utilisateur)
