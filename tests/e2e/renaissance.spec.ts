@@ -5,7 +5,7 @@ const SAVE_KEY = "the-last-human:save";
 /** A v3 save where every upgrade of era I is owned: loading it also exercises the v3 -> v4 migration. */
 const ERA_ONE_DONE = JSON.stringify({
   schemaVersion: 3,
-  savedAt: "2026-11-05T07:52:57.025Z",
+  savedAt: new Date().toISOString(),
   state: {
     schemaVersion: 3,
     elapsedMs: 0,
@@ -59,7 +59,7 @@ test("la renaissance I se fait en deux temps et ouvre l'ère II", async ({ page 
 /** A v5 save in era III, with Données and Calcul for a training run. */
 const ERA_THREE = JSON.stringify({
   schemaVersion: 5,
-  savedAt: "2026-11-05T07:52:57.025Z",
+  savedAt: new Date().toISOString(),
   state: {
     schemaVersion: 5,
     elapsedMs: 0,

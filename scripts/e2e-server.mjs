@@ -16,7 +16,7 @@ const dirs = readdirSync(migrations, { withFileTypes: true })
   .map((d) => d.name)
   .sort();
 for (const dir of dirs) await db.exec(readFileSync(path.join(migrations, dir, "migration.sql"), "utf8"));
-const server = new PGLiteSocketServer({ db, port: 0, maxConnections: 1 });
+const server = new PGLiteSocketServer({ db, port: 0, maxConnections: 10 });
 await server.start();
 
 const app = spawn(`npm run build && npm run start -- -p ${port}`, {
