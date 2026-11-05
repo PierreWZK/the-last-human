@@ -7,7 +7,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createInitialState } from "@/game/engine";
 import { serialize } from "@/game/save";
 import { PrismaClient } from "@/generated/prisma/client";
-import { SNAPSHOTS_KEPT, claimDevice, readSave, writeSave } from "./saves";
+import { SNAPSHOTS_KEPT, claimDevice, plausibleGameTime, readSave, writeSave } from "./saves";
 
 /**
  * Integration tests against a real PostgreSQL (PGlite, in memory), with the real migration.
@@ -52,7 +52,7 @@ beforeEach(async () => {
 
 describe("sauvegarde cloud", () => {
   it("un joueur sans sauvegarde lit la révision 0", async () => {
-    expect((await readSave(db, ALICE)).body).toEqual({ revision: 0, data: null, activeDevice: null });
+    expect((await readSave(db, ALICE)).body).toEqual({ revision: 0, data: null, activeDevice: null, offlineMs: 0 });
   });
 
   it("la première écriture crée la révision 1 et désigne l'appareil actif", async () => {
@@ -81,7 +81,7 @@ describe("sauvegarde cloud", () => {
 
   it("chaque joueur ne voit que sa propre sauvegarde", async () => {
     await writeSave(db, ALICE, { deviceId: PHONE, baseRevision: 0, data: SAVE });
-    expect((await readSave(db, BOB)).body).toEqual({ revision: 0, data: null, activeDevice: null });
+    expect((await readSave(db, BOB)).body).toEqual({ revision: 0, data: null, activeDevice: null, offlineMs: 0 });
   });
 
   it("le serveur garde les 10 dernières sauvegardes", async () => {
@@ -102,5 +102,37 @@ describe("sauvegarde cloud", () => {
     const negative = JSON.parse(SAVE);
     negative.state.resources.money = "-5";
     expect((await writeSave(db, ALICE, { deviceId: PHONE, baseRevision: 0, data: JSON.stringify(negative) })).status).toBe(400);
+  });
+
+  it("refuse (422) une sauvegarde qui a plus de temps de jeu que de temps réel", async () => {
+    await writeSave(db, ALICE, { deviceId: PHONE, baseRevision: 0, data: SAVE });
+    const cheat = serialize({ ...createInitialState(5), elapsedMs: 10 * 3600 * 1000 });
+    const res = await writeSave(db, ALICE, { deviceId: PHONE, baseRevision: 1, data: cheat });
+    expect(res.status).toBe(422);
+    expect((await readSave(db, ALICE)).body.revision).toBe(1);
+  });
+
+  it("mesure l'absence sur l'horloge du serveur, et « Reprendre ici » ne la remet pas à zéro", async () => {
+    await writeSave(db, ALICE, { deviceId: PHONE, baseRevision: 0, data: SAVE });
+    await db.save.update({ where: { userId: ALICE }, data: { lastSeenAt: new Date(Date.now() - 3_600_000) } });
+    const claimed = await claimDevice(db, ALICE, { deviceId: LAPTOP });
+    expect(claimed.body.offlineMs as number).toBeGreaterThanOrEqual(3_600_000);
+    const later = serialize({ ...createInitialState(5), elapsedMs: 3_600_000 });
+    expect((await writeSave(db, ALICE, { deviceId: LAPTOP, baseRevision: 1, data: later })).status).toBe(200);
+  });
+
+  it("plafonne l'absence lue à 24 h", async () => {
+    await writeSave(db, ALICE, { deviceId: PHONE, baseRevision: 0, data: SAVE });
+    await db.save.update({ where: { userId: ALICE }, data: { lastSeenAt: new Date(Date.now() - 72 * 3_600_000) } });
+    expect((await readSave(db, ALICE)).body.offlineMs).toBe(24 * 3_600_000);
+  });
+});
+
+describe("plausibilité du temps de jeu", () => {
+  it("accepte le temps réel plus la marge, refuse au-delà", () => {
+    expect(plausibleGameTime(0, 60_000, 60_000)).toBe(true);
+    expect(plausibleGameTime(0, 180_000, 60_000)).toBe(true);
+    expect(plausibleGameTime(0, 10 * 60_000, 60_000)).toBe(false);
+    expect(plausibleGameTime(1_000_000, 0, 0)).toBe(true); // nouvelle partie : le temps recule
   });
 });

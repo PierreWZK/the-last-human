@@ -172,6 +172,8 @@ export const fr = {
     offline: "Serveur injoignable : la partie continue en local et sera envoyée plus tard.",
     elsewhere: "Cette partie est reprise sur un autre appareil. Ici, elle est en lecture seule.",
     conflict: "Une sauvegarde plus récente existe sur le serveur. La partie est en pause pour ne rien écraser.",
+    rejected:
+      "Le serveur a refusé cette sauvegarde : plus de temps de jeu que de temps réel. « Reprendre ici » recharge la partie du serveur.",
     resumeHere: "Reprendre ici",
     backupTitle: "Exporter ou importer une sauvegarde",
     export: "Exporter la partie",
@@ -181,6 +183,17 @@ export const fr = {
     import: "Importer",
     imported: "Sauvegarde importée.",
     importFailed: "Sauvegarde refusée : {reason}.",
+  },
+  offline: {
+    title: "Pendant votre absence",
+    away: "Absent pendant {duration}.",
+    capped: "Les gains hors ligne sont plafonnés à 24 h : seules 24 h ont été comptées.",
+    produced: "{resource} : +{amount}",
+    bought: "Bâtiments achetés par les scripts : {count}",
+    models: "Modèles entraînés : {count}",
+    archives: "Fragments retrouvés : {count}",
+    achievements: "Succès débloqués : {count}",
+    close: "Reprendre la partie",
   },
   scene: {
     label:

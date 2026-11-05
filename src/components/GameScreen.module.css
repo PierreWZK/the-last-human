@@ -305,3 +305,54 @@
   color: #ff6b4a;
   font-size: var(--text-sm);
 }
+
+/* Sheets (offline recap, events on mobile): centred on desktop, rising from the bottom on phones. */
+.sheetBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgb(0 0 0 / 0.6);
+}
+
+.sheet {
+  width: min(32rem, 100%);
+  max-height: 85dvh;
+  overflow-y: auto;
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--ink-raised);
+  border: 1px solid var(--phosphor-dim);
+  animation: rise 240ms ease-out;
+}
+
+.recap {
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+  color: var(--phosphor);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(1.5rem);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 899px) {
+  .sheetBackdrop {
+    place-items: end stretch;
+    padding: 0;
+  }
+
+  .sheet {
+    width: 100%;
+    padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+  }
+}

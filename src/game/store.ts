@@ -19,12 +19,13 @@ import {
   tick,
   type BuyMode,
 } from "./engine";
+import { OFFLINE_REPORT_MIN_MS, guestAwayMs, offlineProgress, type OfflineReport } from "./offline";
 import type { BuildingId, GameState } from "./types";
 
 /**
  * Client-side store. The game logic lives in engine.ts; this file only owns the clock,
- * persistence and subscriptions. Time advances in fixed steps, capped so that a tab
- * left in the background does not jump ahead (offline progress is phase 6).
+ * persistence and subscriptions. Time advances in fixed steps measured with performance.now();
+ * a long gap (tab in the background, game closed) is replayed by offlineProgress, capped at 24 h.
  */
 
 const STEP_MS = 100;
@@ -39,6 +40,8 @@ export interface StoreSnapshot {
   clicks: number;
   /** True while another device plays this account (or a save conflict waits): time stops, actions do nothing. */
   readOnly: boolean;
+  /** Recap of the last absence, shown until the player closes it. */
+  offline: OfflineReport | null;
 }
 
 type Listener = () => void;
@@ -65,7 +68,7 @@ export class GameStore {
 
   start(): void {
     if (this.timer) return;
-    this.lastNow = Date.now();
+    this.lastNow = performance.now();
     this.timer = setInterval(() => this.step(), STEP_MS);
     this.autosave = setInterval(() => this.save(), AUTOSAVE_MS);
     if (typeof window !== "undefined") {
@@ -147,7 +150,25 @@ export class GameStore {
   setReadOnly = (readOnly: boolean): void => {
     if (this.snapshot.readOnly === readOnly) return;
     this.snapshot = { ...this.snapshot, readOnly };
-    this.lastNow = Date.now(); // time spent read-only is not played
+    this.lastNow = performance.now(); // time spent read-only is not played
+    this.emit();
+  };
+
+  /** Replays an absence measured elsewhere (server clock for a signed-in player). */
+  catchUp = (awayMs: number): void => {
+    if (this.snapshot.readOnly) return;
+    const result = offlineProgress(this.snapshot.state, awayMs);
+    if (!result) return;
+    this.snapshot = {
+      ...this.snapshot,
+      state: result.state,
+      offline: result.report.durationMs >= OFFLINE_REPORT_MIN_MS ? result.report : this.snapshot.offline,
+    };
+    this.emit();
+  };
+
+  dismissOffline = (): void => {
+    this.snapshot = { ...this.snapshot, offline: null };
     this.emit();
   };
 
@@ -169,11 +190,13 @@ export class GameStore {
   // Internals -----------------------------------------------------------
 
   private step(): void {
-    const now = Date.now();
-    const elapsed = Math.min(Math.max(now - this.lastNow, 0), MAX_STEP_MS);
+    const now = performance.now();
+    const elapsed = Math.max(now - this.lastNow, 0);
     this.lastNow = now;
     if (elapsed <= 0) return;
-    this.update((s) => tick(s, elapsed));
+    // A throttled background tab comes back: replay the gap instead of losing it.
+    if (elapsed > MAX_STEP_MS) this.catchUp(elapsed);
+    else this.update((s) => tick(s, elapsed));
   }
 
   private onVisibility = (): void => {
@@ -193,11 +216,17 @@ export class GameStore {
   }
 
   private load(): StoreSnapshot {
-    if (!this.storage) return { state: newGame(), notice: null, clicks: 0, readOnly: false };
+    const fresh = { state: newGame(), notice: null, clicks: 0, readOnly: false, offline: null };
+    if (!this.storage) return fresh;
     const raw = this.storage.getItem(SAVE_KEY);
-    if (raw === null) return { state: newGame(), notice: null, clicks: 0, readOnly: false };
+    if (raw === null) return fresh;
     const result = deserialize(raw);
-    if (result.ok) return { state: result.state, notice: null, clicks: 0, readOnly: false };
+    if (result.ok) {
+      // Guest clock (cahier §6): UTC, nothing if it went back, capped at 24 h by offlineProgress.
+      const away = offlineProgress(result.state, guestAwayMs(result.savedAtMs ?? null, Date.now()));
+      const offline = away && away.report.durationMs >= OFFLINE_REPORT_MIN_MS ? away.report : null;
+      return { state: away?.state ?? result.state, notice: null, clicks: 0, readOnly: false, offline };
+    }
     // Unreadable save: keep a copy, then start fresh. Never overwrite silently.
     try {
       this.storage.setItem(BACKUP_KEY, raw);
@@ -208,6 +237,7 @@ export class GameStore {
       state: createInitialState(),
       clicks: 0,
       readOnly: false,
+      offline: null,
       notice: `La sauvegarde n'a pas pu être lue (${result.reason}). Une copie a été conservée.`,
     };
   }
