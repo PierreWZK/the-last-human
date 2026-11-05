@@ -138,6 +138,12 @@ export const HUMAN_SHARE: Record<BuildingId, number> = {
   shareware: 0.4,
   portal: 0.15,
   rentedServer: 0.02,
+  dataCollector: 0.3,
+  buyScript: 0.2,
+  database: 0.15,
+  cloudCluster: 0.08,
+  datacenter: 0.04,
+  robotArm: 0.01,
 };
 
 /** Game time between two random events: 6 to 10 minutes. */

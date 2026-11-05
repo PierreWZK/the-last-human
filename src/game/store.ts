@@ -1,5 +1,16 @@
 import { BACKUP_KEY, SAVE_KEY, deserialize, serialize } from "./save";
-import { clickManual, buyBuilding, buyUpgrade, createInitialState, resolveEvent, tick, type BuyMode } from "./engine";
+import {
+  buyKnowledgeBonus,
+  buyBuilding,
+  buyUpgrade,
+  clickManual,
+  createInitialState,
+  renaissance,
+  setScriptTarget,
+  resolveEvent,
+  tick,
+  type BuyMode,
+} from "./engine";
 import type { BuildingId, GameState } from "./types";
 
 /**
@@ -81,6 +92,12 @@ export class GameStore {
   upgrade = (id: string): void => this.update((s) => buyUpgrade(s, id));
 
   answerEvent = (choiceId: string): void => this.update((s) => resolveEvent(s, choiceId));
+
+  renaissance = (): void => this.update((s) => renaissance(s));
+
+  buyKnowledge = (id: string): void => this.update((s) => buyKnowledgeBonus(s, id));
+
+  setScriptTarget = (id: BuildingId | null): void => this.update((s) => setScriptTarget(s, id));
 
   /** Writes the current state to localStorage. Never overwrites a save it cannot read. */
   save = (): void => {

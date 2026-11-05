@@ -1,4 +1,4 @@
-import type { BuildingId } from "@/game/types";
+import type { BuildingId, EraOneBuildingId } from "@/game/types";
 import type { SceneModel } from "./model";
 
 /**
@@ -23,7 +23,7 @@ const C = {
 type Point = [number, number];
 
 /** Where each building sends its packets from, and where they land (the screen). */
-const ANCHORS: Record<BuildingId, Point> = {
+const ANCHORS: Record<EraOneBuildingId, Point> = {
   homePage: [26, 22],
   forum: [116, 16],
   shop: [160, 62],
@@ -65,7 +65,7 @@ export function advanceFx(fx: SceneFx, model: SceneModel, now: number, dtMs: num
     const speed = Object.values(model.tiers).reduce((a, b) => a + b, 0) * 0.6;
     fx.autoLines += (dtMs / 1000) * speed * (model.slowed ? 0.5 : 1);
   }
-  for (const id of Object.keys(ANCHORS) as BuildingId[]) {
+  for (const id of Object.keys(ANCHORS) as EraOneBuildingId[]) {
     if (model.shown[id] === 0) continue;
     const due = fx.nextPacket[id] ?? now;
     if (now >= due) {

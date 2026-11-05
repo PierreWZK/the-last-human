@@ -3,6 +3,15 @@ export const fr = {
   title: "THE LAST HUMAN",
   era: "Ère I · The Digital Age",
   years: "1990–2005",
+  eras: {
+    1: { name: "Ère I · The Digital Age", years: "1990–2005" },
+    2: { name: "Ère II · The Automation Age", years: "2005–2020" },
+  },
+  scripts: {
+    label: "Cible des scripts d'achat",
+    none: "Aucune",
+    hint: "Chaque script achète la cible dès qu'elle est abordable.",
+  },
   notice: "Notice",
   tabs: { produce: "Produire", buy: "Acheter", upgrade: "Améliorer", archives: "Archives" },
   windows: {
@@ -14,6 +23,7 @@ export const fr = {
   resources: {
     money: "Argent",
     data: "Données",
+    compute: "Calcul",
     perSecond: "par seconde",
     totalMoney: "Gains au total",
   },
@@ -65,6 +75,26 @@ export const fr = {
     count: "{count} / {total} débloqués",
     locked: "Succès verrouillé",
     bonus: "Chaque succès ajoute 1 % à toute la production et au clic.",
+  },
+  renaissance: {
+    title: "Renaissance",
+    locked: "Terminez toutes les améliorations de l'ère I pour ouvrir la renaissance.",
+    start: "Préparer la renaissance",
+    explainTitle: "Ce que vous perdez et ce que vous gagnez",
+    lose: "Perdu : argent, données, bâtiments et améliorations de l'ère I. Le gain total repart de zéro.",
+    keep: "Gardé : succès, Human Archives, bonus de Knowledge.",
+    gain: "Gagné : {points} point(s) de Knowledge, à dépenser dans l'arbre, et l'accès à l'ère II.",
+    confirm: "Confirmer la renaissance",
+    cancel: "Annuler",
+    count: "Renaissances : {count}",
+  },
+  knowledge: {
+    title: "Arbre de Knowledge",
+    points: "Points disponibles : {points}",
+    cost: "{cost} point(s)",
+    buy: "Acquérir",
+    owned: "Acquis",
+    empty: "Une renaissance donne des points à dépenser ici.",
   },
   scene: {
     label:

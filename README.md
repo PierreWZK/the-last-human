@@ -25,10 +25,11 @@ Légende : ✅ fait · 🚧 en cours · ⏳ prévu.
 | Ère I jouable (clic, 6 bâtiments, 20 améliorations, événement du bug de l'an 2000) | ✅ Phase 1 |
 | Sauvegarde locale versionnée, refus des données illisibles | ✅ Phase 1 |
 | Responsive : un panneau à la fois sous 900 px, trois panneaux au-delà | ✅ Phase 1 |
-| Scène pixel art : le personnage tape au clic, chaque bâtiment apparaît dans la pièce | 🚧 À valider |
-| Économie longue, multiplicateurs, déblocages | ⏳ Phase 2 |
-| Événements à choix (aléatoires à graine), Human Dependency, 6 Human Archives, 7 succès | ✅ Phase 3 (PR en revue) |
-| Renaissances (Knowledge, Algorithms, Neural Cores, AI Cores) | ⏳ Phase 4 |
+| Scène pixel art : le personnage tape au clic, chaque bâtiment apparaît dans la pièce | ✅ Phase 1 bis |
+| Économie longue, multiplicateurs, déblocages | ✅ Phase 2 |
+| Événements à choix (aléatoires à graine), Human Dependency, 6 Human Archives, 7 succès | ✅ Phase 3 |
+| Renaissance I (Knowledge, arbre de 4 bonus), ère II (Calcul, 6 bâtiments, 10 améliorations, scripts d'achat) | ✅ Phase 4 (PR en revue) |
+| Renaissances II à IV (Algorithms, Neural Cores, AI Cores), ères III et IV | ⏳ Phase 4 bis |
 | Comptes (pseudo ou email + mot de passe), sauvegarde cloud | ⏳ Phase 5 |
 | Gains hors ligne (24 h maximum, horloge serveur) | ⏳ Phase 6 |
 | Expérience mobile avancée | ⏳ Phase 7 |

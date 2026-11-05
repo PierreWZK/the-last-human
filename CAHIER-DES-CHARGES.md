@@ -138,6 +138,14 @@ Chaque fin d'ère se conclut par une renaissance, qui ouvre l'ère suivante.
 - On peut refaire une renaissance déjà débloquée pour gagner davantage de sa monnaie (couche répétable).
 - La première renaissance est accompagnée pas à pas : le joueur doit comprendre ce qu'il perd et ce qu'il gagne avant de confirmer.
 
+Décisions de la phase 4 (2026-11-05) :
+
+- Knowledge gagné = `floor(√gains totaux / 100)`, au moins 1 point. Valeur de départ, à régler.
+- Arbre de Knowledge : un bonus à choisir par point dépensé (quatre bonus de départ, un achat chacun), pas d'arbre à prérequis.
+- La renaissance I demande toutes les améliorations de l'ère I, et aucun événement ouvert. En ère II, elle n'est plus proposée : la renaissance II arrive en phase 4 bis.
+- Scripts d'achat (option 1) : le joueur désigne une cible ; les scripts l'achètent dès qu'elle est abordable (achat maximal à chaque pas de temps). Les améliorations « vitesse » et « seuil » des scripts n'ont pas de sens avec cette règle : elles sont remplacées par deux bonus de collecte (Tâches planifiées, Scripts en parallèle).
+- La scène ne dessine pas encore les bâtiments de l'ère II (prévu avec les thèmes d'ère, phase 8).
+
 ### 5.6 Succès
 
 Catégories : progression, production, découverte, renaissance, collection (Human Archives), narration, défis (par exemple « finir l'ère I sans cliquer après la 10e minute »). Chaque succès donne +1 % de production globale. Quelques-uns débloquent un élément cosmétique (thème de terminal, son de démarrage).
@@ -335,7 +343,8 @@ Une branche et une Pull Request vers `main` par phase. Pas de fusion sans valida
 | 1 bis | `feat/living-scene` | Scène pixel art 2D : le personnage tape au clic, chaque bâtiment apparaît dans la pièce | ✅ Fusionné (PR #2) |
 | 2 | `feat/game-economy` | Données, synergies, paliers, achats multiples, simulateur, équilibrage de l'ère I | Simulateur : rythme de la première heure (2 à 5 min) et ère I entre 6 et 10 h. La règle « 30 min sans nouveauté » est reportée à la phase 3 (décision du 2026-11-05) |
 | 3 | `feat/game-events` | Événements à choix, Human Dependency, Human Archives, succès | Un tiers des événements à choix, jauge active, archives consultables, et le simulateur ne dépasse jamais 30 min sans nouveauté en jeu actif |
-| 4 | `feat/prestige-system` | Renaissances, ères II à IV, arbres et grilles | Chaque renaissance change la façon de jouer ; le simulateur atteint l'ère IV |
+| 4 | `feat/prestige-system` | Renaissance I (Knowledge, arbre de bonus au choix, un bonus par point), ère II (Calcul, 6 bâtiments, 10 améliorations, scripts d'achat à cible unique) | Renaissance accompagnée en deux temps ; le simulateur atteint l'ère II sans dépasser 30 min sans nouveauté. Découpage décidé le 2026-11-05 |
+| 4 bis | `feat/prestige-advanced` | Renaissances II à IV, ères III et IV, emplacements d'algorithmes, grille neuronale | Chaque renaissance change la façon de jouer ; le simulateur atteint l'ère IV |
 | 5 | `feat/user-auth` + `feat/cloud-save` | Comptes pseudo ou email, sauvegarde cloud, révisions, appareil actif, reprise de la partie invitée | Changer d'appareil sans perte ; impossible de lire la sauvegarde d'un autre |
 | 6 | `feat/offline-progress` | Gains hors ligne sur horloge serveur, récapitulatif | Jamais plus de 24 h ; manipuler l'horloge ne rapporte rien |
 | 7 | `feat/mobile-ui` | Expérience mobile avancée, gestes, performances | Tests Playwright sur 4 tailles ; Lighthouse mobile dans les cibles |
