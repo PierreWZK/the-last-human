@@ -16,6 +16,8 @@ export interface StoreSnapshot {
   state: GameState;
   /** Shown once after a load that had to start fresh. */
   notice: string | null;
+  /** Manual clicks this session, so the scene can animate each one. Not saved. */
+  clicks: number;
 }
 
 type Listener = () => void;
@@ -65,7 +67,14 @@ export class GameStore {
 
   // Actions -------------------------------------------------------------
 
-  click = (): void => this.update((s) => clickManual(s));
+  click = (): void => {
+    this.snapshot = {
+      ...this.snapshot,
+      state: clickManual(this.snapshot.state),
+      clicks: this.snapshot.clicks + 1,
+    };
+    this.listeners.forEach((listener) => listener());
+  };
 
   buy = (id: BuildingId, mode: BuyMode): void => this.update((s) => buyBuilding(s, id, mode));
 
@@ -105,11 +114,11 @@ export class GameStore {
   }
 
   private load(): StoreSnapshot {
-    if (!this.storage) return { state: createInitialState(), notice: null };
+    if (!this.storage) return { state: createInitialState(), notice: null, clicks: 0 };
     const raw = this.storage.getItem(SAVE_KEY);
-    if (raw === null) return { state: createInitialState(), notice: null };
+    if (raw === null) return { state: createInitialState(), notice: null, clicks: 0 };
     const result = deserialize(raw);
-    if (result.ok) return { state: result.state, notice: null };
+    if (result.ok) return { state: result.state, notice: null, clicks: 0 };
     // Unreadable save: keep a copy, then start fresh. Never overwrite silently.
     try {
       this.storage.setItem(BACKUP_KEY, raw);
@@ -118,6 +127,7 @@ export class GameStore {
     }
     return {
       state: createInitialState(),
+      clicks: 0,
       notice: `La sauvegarde n'a pas pu être lue (${result.reason}). Une copie a été conservée.`,
     };
   }

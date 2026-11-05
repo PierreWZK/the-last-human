@@ -22,9 +22,10 @@ Légende : ✅ fait · 🚧 en cours · ⏳ prévu.
 
 | Fonctionnalité | État |
 |---|---|
-| Ère I jouable (clic, 6 bâtiments, 20 améliorations, événement du bug de l'an 2000) | 🚧 Phase 1, à valider |
-| Sauvegarde locale versionnée, refus des données illisibles | 🚧 Phase 1, à valider |
-| Responsive : un panneau à la fois sous 900 px, trois panneaux au-delà | 🚧 Phase 1, à valider |
+| Ère I jouable (clic, 6 bâtiments, 20 améliorations, événement du bug de l'an 2000) | ✅ Phase 1 |
+| Sauvegarde locale versionnée, refus des données illisibles | ✅ Phase 1 |
+| Responsive : un panneau à la fois sous 900 px, trois panneaux au-delà | ✅ Phase 1 |
+| Scène pixel art : le personnage tape au clic, chaque bâtiment apparaît dans la pièce | 🚧 À valider |
 | Économie longue, multiplicateurs, déblocages | ⏳ Phase 2 |
 | Événements, Human Dependency, Human Archives, succès | ⏳ Phase 3 |
 | Renaissances (Knowledge, Algorithms, Neural Cores, AI Cores) | ⏳ Phase 4 |
@@ -102,7 +103,8 @@ src/
   game/        moteur pur (engine, types, save, store, décimaux) + tests Vitest
   content/     données de l'ère I : bâtiments, améliorations, événement
   app/         page et layout Next.js, styles globaux
-  components/  interface de jeu (GameScreen) et ses styles
+  components/  interface de jeu (GameScreen, Scene) et ses styles
+  scene/       scène pixel art : modèle pur (testé) et dessin Canvas
   i18n/        textes en français
 tests/e2e/     parcours Playwright
 ```

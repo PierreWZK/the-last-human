@@ -48,6 +48,10 @@ export const fr = {
     ignored: "Ignoré. Le ralentissement dure deux minutes de jeu.",
     slowdown: "Ralentissement en cours",
   },
+  scene: {
+    label:
+      "Votre bureau en 1990 : vous tapez du code devant un écran cathodique. Chaque achat apparaît dans la pièce. Touchez la scène pour taper du code.",
+  },
   footer: "Tout se sauvegarde dans ce navigateur. Les gains hors ligne arriveront avec les comptes.",
 } as const;
 
