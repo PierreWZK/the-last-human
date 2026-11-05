@@ -87,13 +87,15 @@ Règle : une ressource n'apparaît à l'écran qu'au moment où elle devient uti
 
 ### 5.2 Production
 
-Chaque bâtiment a un coût de base, une production de base, un facteur de croissance du coût (1,15 par défaut), une part de travail humain (voir 5.7) et des améliorations dédiées.
+Chaque bâtiment a un coût de base, une production de base, un facteur de croissance du coût, une part de travail humain (voir 5.7) et des améliorations dédiées.
 
 - Coût du n-ième exemplaire : `coût_base × croissance^n`.
-- Achat ×1, ×10, ×100 et « maximum », avec un coût total calculé en forme close (série géométrique).
-- Paliers à 10, 25, 50, 100… exemplaires : production ×2 et fragment narratif.
+- Achat ×1, ×10 et « maximum », avec un coût total calculé en forme close (série géométrique).
+- Paliers à 10, 25, 50, 100, 250, 500 et 1000 exemplaires : production ×2 (le fragment narratif arrive en phase 3).
+- Réglages de l'ère I (`TUNING` dans `src/content/era1.ts`), choisis avec le simulateur : coûts des bâtiments ×2, croissance 1,2, coûts des améliorations et seuils de gains ×15.
+- **Le clic est le seul moteur du début** (décision du 2026-11-05) : pas de revenu passif de départ, la première page personnelle s'achète en tapant du code.
 
-Bâtiments de départ de l'ère I (indicatif) : Ordinateur, Page perso, Forum, Boutique en ligne, Logiciel shareware, Portail web.
+Bâtiments de l'ère I : Page personnelle, Forum de discussion, Boutique en ligne, Logiciel shareware, Portail web, Serveur loué.
 
 ### 5.3 Améliorations
 
@@ -329,9 +331,10 @@ Une branche et une Pull Request vers `main` par phase. Pas de fusion sans valida
 | Phase | Branche | Contenu | Critères d'acceptation |
 |---|---|---|---|
 | 0 | `main` (docs) | Audit, choix techniques, README, cahier des charges, repo | ✅ Validé le 2026-11-05 |
-| 1 | `feat/v1-playable` | Socle Next.js, moteur, ère I (travail manuel, 6 bâtiments, ~20 améliorations, premier événement), sauvegarde locale versionnée, responsive, direction visuelle, Dockerfile | Ère I jouable de bout en bout, rechargement sans perte, jouable à 360 px, tests et build verts |
-| 2 | `feat/game-economy` | Données, synergies, paliers, achats multiples, simulateur, équilibrage de l'ère I | Simulateur dans les cibles de rythme |
-| 3 | `feat/game-events` | Événements à choix, Human Dependency, Human Archives, succès | Un tiers des événements à choix, jauge active, archives consultables |
+| 1 | `feat/v1-playable` | Socle Next.js, moteur, ère I (travail manuel, 6 bâtiments, ~20 améliorations, premier événement), sauvegarde locale versionnée, responsive, direction visuelle « Le Poste », Dockerfile | ✅ Fusionné (PR #1) |
+| 1 bis | `feat/living-scene` | Scène pixel art 2D : le personnage tape au clic, chaque bâtiment apparaît dans la pièce | ✅ Fusionné (PR #2) |
+| 2 | `feat/game-economy` | Données, synergies, paliers, achats multiples, simulateur, équilibrage de l'ère I | Simulateur : rythme de la première heure (2 à 5 min) et ère I entre 6 et 10 h. La règle « 30 min sans nouveauté » est reportée à la phase 3 (décision du 2026-11-05) |
+| 3 | `feat/game-events` | Événements à choix, Human Dependency, Human Archives, succès | Un tiers des événements à choix, jauge active, archives consultables, et le simulateur ne dépasse jamais 30 min sans nouveauté en jeu actif |
 | 4 | `feat/prestige-system` | Renaissances, ères II à IV, arbres et grilles | Chaque renaissance change la façon de jouer ; le simulateur atteint l'ère IV |
 | 5 | `feat/user-auth` + `feat/cloud-save` | Comptes pseudo ou email, sauvegarde cloud, révisions, appareil actif, reprise de la partie invitée | Changer d'appareil sans perte ; impossible de lire la sauvegarde d'un autre |
 | 6 | `feat/offline-progress` | Gains hors ligne sur horloge serveur, récapitulatif | Jamais plus de 24 h ; manipuler l'horloge ne rapporte rien |

@@ -83,6 +83,7 @@ Le fichier `.env` n'est jamais versionné. La liste complète sera dans `.env.ex
 npm run dev          # développement
 npm test             # tests unitaires du moteur et des sauvegardes (Vitest)
 npm run test:e2e     # parcours complets sur 4 largeurs (Playwright : 360, 390, 768, 1440 px)
+npm run sim          # simulateur d'équilibrage : joue l'ère I en accéléré et vérifie le rythme
 npm run build        # build de production
 npm start            # lance le build
 NEXT_OUTPUT=standalone npm run build   # build pour l'image Docker
@@ -109,7 +110,7 @@ src/
 tests/e2e/     parcours Playwright
 ```
 
-Pas encore en place : `scripts/sim/` (phase 2), authentification et base de données (phase 5), `server/` (phase 5).
+Aussi : `scripts/sim/` (simulateur d'équilibrage). Pas encore en place : authentification et base de données (phase 5), `server/` (phase 5).
 
 Trois principes :
 

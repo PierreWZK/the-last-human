@@ -176,11 +176,15 @@ function report(label: string, result: SimResult, hours: number): boolean {
   console.log("Plus longs écarts :");
   for (const g of longest) console.log(`  ${g.gap.toFixed(1).padStart(6)} min avant  ${g.label} (à ${g.minute.toFixed(1)} min)`);
 
-  if (!label.startsWith("actif")) return true;
+  if (!label.startsWith("actif")) {
+    console.log("→ attendu : le clic est le seul moteur du début (décision du 2026-11-05), sans clic rien ne démarre");
+    return true;
+  }
   const eraHours = result.eraDoneMinute === null ? Infinity : result.eraDoneMinute / 60;
-  const ok =
-    medianFirstHour >= 2 && medianFirstHour <= 5 && maxGap <= 30 && eraHours >= 6 && eraHours <= 10;
-  console.log(ok ? "→ cibles atteintes" : "→ cibles NON atteintes (rythme 2–5 min, écart ≤ 30 min, ère I entre 6 et 10 h)");
+  const ok = medianFirstHour >= 2 && medianFirstHour <= 5 && eraHours >= 6 && eraHours <= 10;
+  console.log(ok ? "→ cibles atteintes (rythme 2–5 min, ère I entre 6 et 10 h)" : "→ cibles NON atteintes (rythme 2–5 min, ère I entre 6 et 10 h)");
+  // Decision of 2026-11-05: the 30-minute rule waits for the events of phase 3. Reported, not enforced yet.
+  if (maxGap > 30) console.log(`→ écart de ${maxGap.toFixed(0)} min > 30 : reporté à la phase 3 (événements)`);
   return ok;
 }
 
