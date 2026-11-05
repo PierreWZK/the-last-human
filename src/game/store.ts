@@ -37,6 +37,8 @@ export interface StoreSnapshot {
   notice: string | null;
   /** Manual clicks this session, so the scene can animate each one. Not saved. */
   clicks: number;
+  /** True while another device plays this account (or a save conflict waits): time stops, actions do nothing. */
+  readOnly: boolean;
 }
 
 type Listener = () => void;
@@ -87,6 +89,7 @@ export class GameStore {
   // Actions -------------------------------------------------------------
 
   click = (): void => {
+    if (this.snapshot.readOnly) return;
     this.snapshot = {
       ...this.snapshot,
       state: clickManual(this.snapshot.state),
@@ -123,6 +126,36 @@ export class GameStore {
 
   removeCore = (cell: number): void => this.update((s) => removeCore(s, cell));
 
+  /** The current state as a save envelope (export, cloud upload). */
+  serialized = (): string => serialize(this.snapshot.state);
+
+  /**
+   * Replaces the game (cloud save, import). The previous local save is kept in the backup slot,
+   * so nothing is lost silently.
+   */
+  replaceState = (state: GameState, notice: string | null = null): void => {
+    try {
+      this.storage?.setItem(BACKUP_KEY, serialize(this.snapshot.state));
+    } catch {
+      // Without storage the replacement still happens; the notice tells the player.
+    }
+    this.snapshot = { ...this.snapshot, state, notice: notice ?? this.snapshot.notice };
+    this.save();
+    this.emit();
+  };
+
+  setReadOnly = (readOnly: boolean): void => {
+    if (this.snapshot.readOnly === readOnly) return;
+    this.snapshot = { ...this.snapshot, readOnly };
+    this.lastNow = Date.now(); // time spent read-only is not played
+    this.emit();
+  };
+
+  setNotice = (notice: string | null): void => {
+    this.snapshot = { ...this.snapshot, notice };
+    this.emit();
+  };
+
   /** Writes the current state to localStorage. Never overwrites a save it cannot read. */
   save = (): void => {
     if (!this.storage) return;
@@ -148,18 +181,23 @@ export class GameStore {
   };
 
   private update(fn: (s: GameState) => GameState): void {
+    if (this.snapshot.readOnly) return;
     const next = fn(this.snapshot.state);
     if (next === this.snapshot.state) return;
     this.snapshot = { ...this.snapshot, state: next };
+    this.emit();
+  }
+
+  private emit(): void {
     this.listeners.forEach((listener) => listener());
   }
 
   private load(): StoreSnapshot {
-    if (!this.storage) return { state: newGame(), notice: null, clicks: 0 };
+    if (!this.storage) return { state: newGame(), notice: null, clicks: 0, readOnly: false };
     const raw = this.storage.getItem(SAVE_KEY);
-    if (raw === null) return { state: newGame(), notice: null, clicks: 0 };
+    if (raw === null) return { state: newGame(), notice: null, clicks: 0, readOnly: false };
     const result = deserialize(raw);
-    if (result.ok) return { state: result.state, notice: null, clicks: 0 };
+    if (result.ok) return { state: result.state, notice: null, clicks: 0, readOnly: false };
     // Unreadable save: keep a copy, then start fresh. Never overwrite silently.
     try {
       this.storage.setItem(BACKUP_KEY, raw);
@@ -169,13 +207,14 @@ export class GameStore {
     return {
       state: createInitialState(),
       clicks: 0,
+      readOnly: false,
       notice: `La sauvegarde n'a pas pu être lue (${result.reason}). Une copie a été conservée.`,
     };
   }
 }
 
 /** A new game gets a fresh random seed, so random events differ between players. */
-function newGame() {
+export function newGame() {
   return createInitialState(Math.floor(Math.random() * 2 ** 31) + 1);
 }
 

@@ -165,6 +165,14 @@ Décisions de la phase 4 ter (2026-11-05, valeurs par défaut proposées dans la
 - Renaissance IV, AI Cores et politiques de civilisation : rattachées à la phase 9, car elles ouvrent l'ère V et la fin du jeu.
 - Équilibrage : le simulateur atteint l'ère IV à 8,5 h. L'ère III ne dure qu'une heure et l'ère IV produit bien plus de 7 milliards de robots : à régler avec l'ère V.
 
+Décisions de la phase 5 (2026-11-05) :
+
+- Pile : Prisma 7 (adaptateur `pg`), Better Auth 1.7 avec le plugin pseudo, PostgreSQL. En local et en test, PGlite remplace PostgreSQL (aucune installation système).
+- Email facultatif : Better Auth exige un email. Sans email, on stocke `pseudo@sans-email.thelasthuman.invalid` (domaine réservé, jamais de courrier) ; le serveur refuse qu'un autre pseudo l'utilise, et l'interface ne l'affiche pas.
+- Sauvegarde cloud : `GET/PUT /api/save`, révision obligatoire (409 si dépassée), appareil actif (423 sinon), « Reprendre ici » via `POST /api/save/claim`, 10 dernières sauvegardes gardées, 256 Ko maximum, validation par le même `deserialize` que le client.
+- Au branchement d'un compte : la partie locale est envoyée si le compte n'a pas de sauvegarde (reprise de la partie invitée) ou si elle descend de la dernière révision connue de cet appareil ; sinon la partie du serveur est chargée et la locale gardée dans l'emplacement de secours.
+- Export et import en texte dans l'onglet « Compte ». La vérification des gains impossibles par l'horloge serveur arrive avec la phase 6.
+
 ### 5.6 Succès
 
 Catégories : progression, production, découverte, renaissance, collection (Human Archives), narration, défis (par exemple « finir l'ère I sans cliquer après la 10e minute »). Chaque succès donne +1 % de production globale. Quelques-uns débloquent un élément cosmétique (thème de terminal, son de démarrage).
@@ -365,7 +373,7 @@ Une branche et une Pull Request vers `main` par phase. Pas de fusion sans valida
 | 4 | `feat/prestige-system` | Renaissance I (Knowledge, arbre de bonus au choix, un bonus par point), ère II (Calcul, 6 bâtiments, 10 améliorations, scripts d'achat à cible unique) | Renaissance accompagnée en deux temps ; le simulateur atteint l'ère II sans dépasser 30 min sans nouveauté. Découpage décidé le 2026-11-05 |
 | 4 bis | `feat/prestige-advanced` | Renaissance II (algorithmes en modificateurs chiffrés, deux emplacements plus un par renaissance II), ère III (Intelligence, entraînement de modèles en durée de jeu, trois bâtiments) | Tous les algorithmes obtenables par la progression ; le simulateur atteint l'ère III sans dépasser 30 min sans nouveauté |
 | 4 ter | `feat/prestige-final` | Améliorations de l'ère III, renaissance III (Neural Cores), grille neuronale, ère IV (Robots, Autonomie, auto-réplication). Renaissance IV et politiques de civilisation déplacées en phase 9 | Le simulateur atteint l'ère IV |
-| 5 | `feat/user-auth` + `feat/cloud-save` | Comptes pseudo ou email, sauvegarde cloud, révisions, appareil actif, reprise de la partie invitée | Changer d'appareil sans perte ; impossible de lire la sauvegarde d'un autre |
+| 5 | `feat/user-auth` (une seule PR, comptes et sauvegarde cloud) | Comptes pseudo ou email, sauvegarde cloud, révisions, appareil actif, reprise de la partie invitée | Changer d'appareil sans perte ; impossible de lire la sauvegarde d'un autre |
 | 6 | `feat/offline-progress` | Gains hors ligne sur horloge serveur, récapitulatif | Jamais plus de 24 h ; manipuler l'horloge ne rapporte rien |
 | 7 | `feat/mobile-ui` | Expérience mobile avancée, gestes, performances | Tests Playwright sur 4 tailles ; Lighthouse mobile dans les cibles |
 | 8 | `feat/visual-polish` | Thèmes des cinq ères, animations, 3D et repli | 3D facultative, repli 2D testé, 30 images/s minimum sur mobile milieu de gamme |

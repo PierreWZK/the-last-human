@@ -1,0 +1,107 @@
+// Tables Better Auth (user, session, account, verification) + sauvegardes cloud.
+// Better Auth lit les noms de champs ci-dessous : ne pas les renommer sans changer sa config.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id              String         @id
+  name            String
+  /// Facultatif pour le joueur : sans email, une adresse en .invalid est stockée (voir src/server/auth.ts).
+  email           String         @unique
+  emailVerified   Boolean        @default(false)
+  image           String?
+  /// Pseudo, en minuscules (unicité insensible à la casse).
+  username        String?        @unique
+  /// Pseudo tel que le joueur l'a tapé.
+  displayUsername String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  sessions        Session[]
+  accounts        Account[]
+  save            Save?
+  snapshots       SaveSnapshot[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+/// La sauvegarde courante d'un joueur. `revision` augmente à chaque écriture acceptée.
+model Save {
+  userId       String   @id
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  revision     Int      @default(0)
+  /// Enveloppe JSON produite par serialize() (src/game/save.ts), stockée telle quelle.
+  data         String
+  /// L'appareil qui joue ; les autres sont en lecture seule.
+  activeDevice String?
+  lastSeenAt   DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("save")
+}
+
+/// Les 10 dernières sauvegardes acceptées, pour la récupération.
+model SaveSnapshot {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  revision  Int
+  data      String
+  createdAt DateTime @default(now())
+
+  @@index([userId, revision])
+  @@map("save_snapshot")
+}

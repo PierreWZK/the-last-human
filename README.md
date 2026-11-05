@@ -32,7 +32,7 @@ Légende : ✅ fait · 🚧 en cours · ⏳ prévu.
 | Renaissance II (Algorithmes, emplacements), ère III (Intelligence, entraînement de modèles, 3 bâtiments) | ✅ Phase 4 bis |
 | Renaissance III (Neural Cores, grille neuronale 3 × 3), ère IV (Robots, Autonomie, auto-réplication) | ✅ Phase 4 ter (PR en revue) |
 | Renaissance IV (AI Cores, politiques de civilisation) | ⏳ Phase 9 |
-| Comptes (pseudo ou email + mot de passe), sauvegarde cloud | ⏳ Phase 5 |
+| Comptes (pseudo ou email + mot de passe), sauvegarde cloud, appareil actif, export/import | ✅ Phase 5 (PR en revue) |
 | Gains hors ligne (24 h maximum, horloge serveur) | ⏳ Phase 6 |
 | Expérience mobile avancée | ⏳ Phase 7 |
 | Direction artistique par ère, 3D | ⏳ Phase 8 |
@@ -63,12 +63,17 @@ Légende : ✅ fait · 🚧 en cours · ⏳ prévu.
 
 ## Installation locale
 
+Sans PostgreSQL installé, la base locale est PGlite (PostgreSQL en WebAssembly, installé par npm) :
+
 ```bash
 npm install
+cp .env.example .env         # puis remplir BETTER_AUTH_SECRET
+npm run db:dev               # base locale sur le port 5433, à laisser ouverte
+npx prisma migrate deploy    # dans un second terminal
 npm run dev                  # http://localhost:3000
 ```
 
-Aucune variable d'environnement n'est nécessaire avant la phase 5.
+Le jeu reste jouable sans compte et sans base : seuls l'onglet « Compte » et la sauvegarde cloud en ont besoin.
 
 ## Variables d'environnement
 
