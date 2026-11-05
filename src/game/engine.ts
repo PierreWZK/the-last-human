@@ -11,6 +11,7 @@ import {
   Y2K_TRIGGER_MONEY,
   type AchievementInput,
 } from "@/content/events1";
+import { KNOWLEDGE_BONUSES, KNOWLEDGE_DIVISOR } from "@/content/knowledge";
 import { D, ZERO } from "./decimal";
 import { nextRandom } from "./rng";
 import {
@@ -52,6 +53,9 @@ export function createInitialState(seed = 1): GameState {
     nextEventAtMs: EVENT_GAP_MS.min,
     archives: {},
     achievements: {},
+    renaissances: 0,
+    knowledgePoints: 0,
+    knowledgeBonuses: {},
   };
 }
 
@@ -135,7 +139,7 @@ export function requirementMet(state: GameState, req: UpgradeRequirement): boole
 /** Passive production per second, per resource (buildings only). */
 export function productionPerSecond(state: GameState): Record<ResourceId, Decimal> {
   const rates: Record<ResourceId, Decimal> = { money: ZERO, data: ZERO };
-  const factor = timedFactor(state) * achievementBonus(state);
+  const factor = timedFactor(state) * achievementBonus(state) * knowledgeMultiplier(state, "all");
   for (const def of BUILDINGS) {
     const owned = state.buildings[def.id];
     if (owned === 0) continue;
@@ -162,7 +166,56 @@ export function humanDependency(state: GameState): number {
 
 /** Gain of one manual action (the « taper du code » button). */
 export function manualGain(state: GameState): Decimal {
-  return MANUAL_BASE.mul(multiplier(state, "manual")).mul(achievementBonus(state));
+  return MANUAL_BASE.mul(multiplier(state, "manual"))
+    .mul(achievementBonus(state))
+    .mul(knowledgeMultiplier(state, "manual"));
+}
+
+/** Product of the Knowledge bonuses bought for `target` (manual work, or all production). */
+export function knowledgeMultiplier(state: GameState, target: "manual" | "all"): number {
+  let m = 1;
+  for (const b of KNOWLEDGE_BONUSES) if (state.knowledgeBonuses[b.id] && b.target === target) m *= b.factor;
+  return m;
+}
+
+/** Points of Knowledge a renaissance would grant now. */
+export function knowledgeGain(state: GameState): number {
+  return Math.max(1, Math.floor(Math.sqrt(state.totalMoney.toNumber()) / KNOWLEDGE_DIVISOR));
+}
+
+/** The first renaissance needs every upgrade of era I. */
+export function canRenaissance(state: GameState): boolean {
+  return state.event.status !== "open" && UPGRADES.every((u) => state.upgrades[u.id]);
+}
+
+/**
+ * Renaissance: resets money, buildings and upgrades; keeps achievements, archives, Knowledge and
+ * the Knowledge bonuses. Returns the same state if the requirements are not met.
+ */
+export function renaissance(state: GameState): GameState {
+  if (!canRenaissance(state)) return state;
+  return refreshUnlocks({
+    ...state,
+    resources: { money: ZERO, data: ZERO },
+    totalMoney: ZERO,
+    buildings: Object.fromEntries(BUILDINGS.map((b) => [b.id, 0])) as Record<BuildingId, number>,
+    upgrades: {},
+    effects: [],
+    renaissances: state.renaissances + 1,
+    knowledgePoints: state.knowledgePoints + knowledgeGain(state),
+    nextEventAtMs: state.elapsedMs + EVENT_GAP_MS.min,
+  });
+}
+
+/** Buys one Knowledge bonus with its point cost. Nothing changes if it is owned or unaffordable. */
+export function buyKnowledgeBonus(state: GameState, id: string): GameState {
+  const def = KNOWLEDGE_BONUSES.find((b) => b.id === id);
+  if (!def || state.knowledgeBonuses[id] || state.knowledgePoints < def.cost) return state;
+  return {
+    ...state,
+    knowledgePoints: state.knowledgePoints - def.cost,
+    knowledgeBonuses: { ...state.knowledgeBonuses, [id]: true },
+  };
 }
 
 /** Total price of buying `count` more buildings when `owned` are already owned. */

@@ -1,5 +1,6 @@
 import { BUILDINGS, UPGRADES } from "@/content/era1";
 import { ACHIEVEMENTS, ARCHIVES, EVENTS, EVENT_GAP_MS, RANDOM_EVENTS } from "@/content/events1";
+import { KNOWLEDGE_BONUSES } from "@/content/knowledge";
 import { D } from "./decimal";
 import { createInitialState } from "./engine";
 import { SCHEMA_VERSION, type BuildingId, type GameState } from "./types";
@@ -28,6 +29,9 @@ interface SerializedState {
   nextEventAtMs: number;
   archives: Record<string, true>;
   achievements: Record<string, true>;
+  renaissances: number;
+  knowledgePoints: number;
+  knowledgeBonuses: Record<string, true>;
 }
 
 interface Envelope {
@@ -61,6 +65,9 @@ export function serialize(state: GameState, now: Date = new Date()): string {
       nextEventAtMs: state.nextEventAtMs,
       archives: { ...state.archives },
       achievements: { ...state.achievements },
+      renaissances: state.renaissances,
+      knowledgePoints: state.knowledgePoints,
+      knowledgeBonuses: { ...state.knowledgeBonuses },
     },
   };
   return JSON.stringify(envelope);
@@ -110,6 +117,8 @@ const MIGRATIONS: Array<(raw: Record<string, unknown>) => Record<string, unknown
       achievements: {},
     };
   },
+  // v2 -> v3: renaissance I adds the Knowledge counters, all empty at first.
+  (raw) => ({ ...raw, renaissances: 0, knowledgePoints: 0, knowledgeBonuses: {} }),
 ];
 
 function migrate(raw: Record<string, unknown>, fromVersion: number): LoadResult {
@@ -125,6 +134,7 @@ function migrate(raw: Record<string, unknown>, fromVersion: number): LoadResult 
 const EVENT_IDS = new Set([...EVENTS, ...RANDOM_EVENTS].map((e) => e.id));
 const ARCHIVE_IDS = new Set(ARCHIVES.map((a) => a.id));
 const ACHIEVEMENT_IDS = new Set(ACHIEVEMENTS.map((a) => a.id));
+const KNOWLEDGE_IDS = new Set(KNOWLEDGE_BONUSES.map((b) => b.id));
 
 function validate(raw: Record<string, unknown>): LoadResult {
   const { elapsedMs, resources, totalMoney, buildings, upgrades, event, effects } = raw;
@@ -182,6 +192,15 @@ function validate(raw: Record<string, unknown>): LoadResult {
     if (!ACHIEVEMENT_IDS.has(key) || value !== true) return bad(`Succès inconnu : ${key}`);
   }
 
+  if (!isNonNegativeFinite(raw.renaissances) || !Number.isSafeInteger(raw.renaissances)) return bad("Renaissances invalides");
+  if (!isNonNegativeFinite(raw.knowledgePoints) || !Number.isSafeInteger(raw.knowledgePoints)) {
+    return bad("Points de Knowledge invalides");
+  }
+  if (!isRecord(raw.knowledgeBonuses)) return bad("Bonus de Knowledge invalides");
+  for (const [key, value] of Object.entries(raw.knowledgeBonuses)) {
+    if (!KNOWLEDGE_IDS.has(key) || value !== true) return bad(`Bonus de Knowledge inconnu : ${key}`);
+  }
+
   if (!Array.isArray(effects)) return bad("Effets invalides");
   for (const e of effects) {
     const kindOk = isRecord(e) && (e.kind === "slowdown" || e.kind === "boost");
@@ -207,6 +226,9 @@ function validate(raw: Record<string, unknown>): LoadResult {
     nextEventAtMs: raw.nextEventAtMs as number,
     archives: raw.archives as Record<string, true>,
     achievements: raw.achievements as Record<string, true>,
+    renaissances: raw.renaissances as number,
+    knowledgePoints: raw.knowledgePoints as number,
+    knowledgeBonuses: raw.knowledgeBonuses as Record<string, true>,
   };
   return { ok: true, state };
 }

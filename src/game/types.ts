@@ -1,7 +1,7 @@
 import type Decimal from "break_infinity.js";
 
 /** Version of the save format. Bump it with a migration when GameState changes shape. */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export type ResourceId = "money" | "data";
 
@@ -97,4 +97,10 @@ export interface GameState {
   archives: Record<string, true>;
   /** Unlocked achievements. */
   achievements: Record<string, true>;
+  /** Renaissances completed, lifetime. */
+  renaissances: number;
+  /** Knowledge points available to spend on the Knowledge tree. */
+  knowledgePoints: number;
+  /** Knowledge bonuses bought. */
+  knowledgeBonuses: Record<string, true>;
 }
