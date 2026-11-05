@@ -1,6 +1,6 @@
 # THE LAST HUMAN
 
-> Jour 22 du défi **30 jours, 30 projets** · Next.js · TypeScript · PostgreSQL · ⏳ **En développement**
+> Jour 22 du défi **30 jours, 30 projets** · Next.js · TypeScript · PostgreSQL · ✅ **En ligne** : [thelasthuman.projectp.fr](https://thelasthuman.projectp.fr)
 
 Un jeu incremental narratif, jouable dans le navigateur, sur PC comme sur téléphone.
 
@@ -22,22 +22,22 @@ Légende : ✅ fait · 🚧 en cours · ⏳ prévu.
 
 | Fonctionnalité | État |
 |---|---|
-| Ère I jouable (clic, 6 bâtiments, 20 améliorations, événement du bug de l'an 2000) | ✅ Phase 1 |
-| Sauvegarde locale versionnée, refus des données illisibles | ✅ Phase 1 |
-| Responsive : un panneau à la fois sous 900 px, trois panneaux au-delà | ✅ Phase 1 |
+| Ère I jouable (clic, 6 bâtiments, 22 améliorations, événement du bug de l'an 2000) | ✅ Phase 1 |
+| Sauvegarde locale versionnée (v7), migrations testées, refus des données illisibles | ✅ Phase 1 |
 | Scène pixel art : le personnage tape au clic, chaque bâtiment apparaît dans la pièce | ✅ Phase 1 bis |
-| Économie longue, multiplicateurs, déblocages | ✅ Phase 2 |
-| Événements à choix (aléatoires à graine), Human Dependency, 6 Human Archives, 7 succès | ✅ Phase 3 |
-| Renaissance I (Knowledge, arbre de 4 bonus), ère II (Calcul, 6 bâtiments, 10 améliorations, scripts d'achat) | ✅ Phase 4 (PR en revue) |
-| Renaissance II (Algorithmes, emplacements), ère III (Intelligence, entraînement de modèles, 3 bâtiments) | ✅ Phase 4 bis |
-| Renaissance III (Neural Cores, grille neuronale 3 × 3), ère IV (Robots, Autonomie, auto-réplication) | ✅ Phase 4 ter (PR en revue) |
-| Renaissance IV (AI Cores, politiques de civilisation) | ⏳ Phase 9 |
-| Comptes (pseudo ou email + mot de passe), sauvegarde cloud, appareil actif, export/import | ✅ Phase 5 (PR en revue) |
-| Gains hors ligne (24 h maximum, horloge serveur) | ⏳ Phase 6 |
-| Expérience mobile avancée | ⏳ Phase 7 |
-| Direction artistique par ère, 3D | ⏳ Phase 8 |
-| Fin du jeu et classement | ⏳ Phase 9 |
-| Connexion Google et Discord | ⏳ V2 |
+| Économie longue, paliers, synergies, simulateur d'équilibrage | ✅ Phase 2 |
+| Événements à choix (aléatoires à graine), Human Dependency, 8 Human Archives, 7 succès | ✅ Phase 3 |
+| Renaissance I (Knowledge, 4 bonus), ère II (Calcul, 6 bâtiments, scripts d'achat) | ✅ Phase 4 |
+| Renaissance II (Algorithmes, emplacements), ère III (Intelligence, entraînement de modèles) | ✅ Phase 4 bis |
+| Renaissance III (Neural Cores, grille neuronale 3 × 3), ère IV (Robots, Autonomie, auto-réplication) | ✅ Phase 4 ter |
+| Comptes (pseudo ou email + mot de passe), sauvegarde cloud, appareil actif, « Reprendre ici », export/import | ✅ Phase 5 |
+| Gains hors ligne (24 h maximum, horloge du serveur), récapitulatif au retour, refus des gains impossibles | ✅ Phase 6 |
+| Mobile : onglets en bas, ressources épinglées, balayage entre onglets ; tablette en deux colonnes ; raccourcis clavier | ✅ Phase 7 |
+| Un thème par ère, scènes des ères II à V (datacenter, réseau de neurones, Terre couverte de machines), transitions | ✅ Phase 8 (3D en repli 2D) |
+| Renaissance IV (AI Cores, politiques de civilisation), ère V (Contrôle, directives) | ✅ Phase 9 |
+| Fin scénarisée, écran final, archive figée, « Nouvelle humanité », classement public et profil masquable | ✅ Phase 9 |
+| Équilibrage complet (40 à 60 h visées, 10 h aujourd'hui), audit de sécurité, Lighthouse | ⏳ Phase 10 |
+| Connexion Google et Discord, anglais | ⏳ V2 |
 
 ## Stack technique
 
@@ -49,17 +49,17 @@ Légende : ✅ fait · 🚧 en cours · ⏳ prévu.
 | État de l'interface | Store maison exposé par `useSyncExternalStore` |
 | Base de données | PostgreSQL + Prisma |
 | Authentification | Better Auth (pseudo ou email + mot de passe) |
-| Textes | Un module `src/i18n/fr.ts` (français) ; `next-intl` reste prévu pour l'anglais |
+| Textes | Un module `src/i18n/fr.ts` (français), même forme pour l'anglais en V2 |
 | Styles | CSS Modules + variables CSS (`globals.css`), un thème par ère, direction « Le Poste » en ère I |
 | Animations | CSS, `motion` seulement si nécessaire |
-| 3D | three.js chargé à la demande, avec repli 2D |
-| Tests | Vitest (moteur, économie, sauvegardes), Playwright (parcours, mobile) |
+| Scènes | Canvas 2D en pixel art, une scène par ère ; la Terre de l'ère IV est le repli 2D du globe 3D prévu |
+| Tests | Vitest (moteur, économie, sauvegardes, hors ligne, intégration PostgreSQL), Playwright (parcours, comptes, fin, 4 largeurs) |
 | Déploiement | Docker (`output: standalone`) sur Coolify |
 
 ## Prérequis
 
 - Node.js 22 ou plus, npm 10 ou plus
-- PostgreSQL 16 ou plus, à partir de la phase 5 (comptes et sauvegarde cloud)
+- PostgreSQL 16 ou plus en production. En local et en test, PGlite le remplace (aucune installation).
 
 ## Installation locale
 
@@ -77,13 +77,14 @@ Le jeu reste jouable sans compte et sans base : seuls l'onglet « Compte » et l
 
 ## Variables d'environnement
 
-| Variable | Rôle | Dès la phase |
-|---|---|---|
-| `DATABASE_URL` | Connexion PostgreSQL | 5 |
-| `BETTER_AUTH_SECRET` | Secret de signature des sessions (32 octets aléatoires ou plus) | 5 |
-| `BETTER_AUTH_URL` | URL publique du site (obligatoire derrière Coolify) | 5 |
+| Variable | Rôle |
+|---|---|
+| `DATABASE_URL` | Connexion PostgreSQL |
+| `BETTER_AUTH_SECRET` | Secret de signature des sessions (32 octets aléatoires ou plus) |
+| `BETTER_AUTH_URL` | URL publique du site (obligatoire derrière Coolify) |
+| `DATABASE_POOL_MAX` | Facultatif : taille du pool Prisma (`1` pour la base PGlite des tests) |
 
-Le fichier `.env` n'est jamais versionné. La liste complète sera dans `.env.example`.
+Le fichier `.env` n'est jamais versionné. Modèle : `.env.example`.
 
 ## Commandes
 
@@ -91,7 +92,7 @@ Le fichier `.env` n'est jamais versionné. La liste complète sera dans `.env.ex
 npm run dev          # développement
 npm test             # tests unitaires du moteur et des sauvegardes (Vitest)
 npm run test:e2e     # parcours complets sur 4 largeurs (Playwright : 360, 390, 768, 1440 px)
-npm run sim          # simulateur d'équilibrage : joue l'ère I en accéléré et vérifie le rythme
+npm run sim          # simulateur d'équilibrage : joue la partie jusqu'à la fin et vérifie le rythme
 npm run build        # build de production
 npm start            # lance le build
 NEXT_OUTPUT=standalone npm run build   # build pour l'image Docker
@@ -103,22 +104,25 @@ NEXT_OUTPUT=standalone npm run build   # build pour l'image Docker
 2. Ressource **PostgreSQL** dans le même projet Coolify, puis renseigner `DATABASE_URL` avec l'adresse interne.
 3. Variables de runtime : `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL=https://thelasthuman.projectp.fr`. Ne pas mettre `NODE_ENV=production` en variable de build, sinon `npm ci` n'installe pas les outils de build.
 4. Domaine : `https://thelasthuman.projectp.fr`.
-5. Les migrations Prisma s'appliquent au démarrage du conteneur.
+5. Healthcheck : `GET /api/health` sur l'hôte `127.0.0.1`, port 3000, délai de démarrage 30 s. Avec `localhost`, l'image alpine passe par IPv6 et la connexion est refusée.
+6. Les migrations Prisma s'appliquent au démarrage du conteneur. L'application suit `main` : chaque fusion redéploie.
 
 ## Architecture générale
 
 ```
 src/
-  game/        moteur pur (engine, types, save, store, décimaux) + tests Vitest
-  content/     données de l'ère I : bâtiments, améliorations, événement
-  app/         page et layout Next.js, styles globaux
-  components/  interface de jeu (GameScreen, Scene) et ses styles
-  scene/       scène pixel art : modèle pur (testé) et dessin Canvas
+  game/        moteur pur (engine, types, save, store, offline, cloud, décimaux) + tests Vitest
+  content/     données : bâtiments, améliorations, événements, ères I à V, algorithmes, grille, politiques
+  server/      Better Auth, Prisma, sauvegardes cloud, classement (+ tests d'intégration PGlite)
+  app/         page, layout, favicon et routes API (auth, save, leaderboard, profile, health)
+  components/  interface de jeu (GameScreen, Scene, AccountPanel, EndingScreen, Leaderboard)
+  scene/       scènes Canvas : modèle pur (testé), pièce de l'ère I, scènes des ères II à V
+  lib/         règles de compte partagées, client d'authentification
   i18n/        textes en français
+prisma/        schéma et migrations
+scripts/       simulateur d'équilibrage, serveur des tests E2E
 tests/e2e/     parcours Playwright
 ```
-
-Aussi : `scripts/sim/` (simulateur d'équilibrage). Pas encore en place : authentification et base de données (phase 5), `server/` (phase 5).
 
 Trois principes :
 
