@@ -1,5 +1,5 @@
 import type Decimal from "break_infinity.js";
-import { BUILDINGS, UPGRADES, Y2K_PATCH_COST, Y2K_SLOWDOWN, Y2K_TRIGGER_MONEY } from "@/content/era1";
+import { BUILDINGS, MILESTONES, UPGRADES, Y2K_PATCH_COST, Y2K_SLOWDOWN, Y2K_TRIGGER_MONEY } from "@/content/era1";
 import { D, ZERO } from "./decimal";
 import {
   SCHEMA_VERSION,
@@ -56,7 +56,31 @@ export function multiplier(state: GameState, target: "manual" | BuildingId): num
 function targetMatches(upgradeTarget: UpgradeTarget, target: "manual" | BuildingId): boolean {
   if (upgradeTarget.kind === "all") return true;
   if (upgradeTarget.kind === "manual") return target === "manual";
+  if (upgradeTarget.kind === "synergy") return false; // handled by synergyBonus
   return target === upgradeTarget.building;
+}
+
+/** Bonus from synergies: 1 + Σ perUnit × owned source, for upgrades owned by the player. */
+export function synergyBonus(state: GameState, building: BuildingId): number {
+  let bonus = 1;
+  for (const u of UPGRADES) {
+    if (!state.upgrades[u.id] || u.target.kind !== "synergy") continue;
+    if (u.target.building !== building) continue;
+    bonus += u.target.perUnit * state.buildings[u.target.source];
+  }
+  return bonus;
+}
+
+/** Each milestone reached doubles the production of that building (10, 25, 50, 100…). */
+export function milestoneMultiplier(owned: number): number {
+  let m = 1;
+  for (const threshold of MILESTONES) if (owned >= threshold) m *= 2;
+  return m;
+}
+
+/** The next threshold to reach, or null once the last one is passed. */
+export function nextMilestone(owned: number): number | null {
+  return MILESTONES.find((threshold) => owned < threshold) ?? null;
 }
 
 function slowdown(state: GameState): number {
@@ -81,7 +105,7 @@ export function productionPerSecond(state: GameState): Record<ResourceId, Decima
   for (const def of BUILDINGS) {
     const owned = state.buildings[def.id];
     if (owned === 0) continue;
-    const m = multiplier(state, def.id) * slow;
+    const m = multiplier(state, def.id) * synergyBonus(state, def.id) * milestoneMultiplier(owned) * slow;
     rates[def.produces.resource] = rates[def.produces.resource].add(
       def.produces.perSecond.mul(owned).mul(m),
     );
