@@ -6,6 +6,7 @@ export const fr = {
   eras: {
     1: { name: "Ère I · The Digital Age", years: "1990–2005" },
     2: { name: "Ère II · The Automation Age", years: "2005–2020" },
+    3: { name: "Ère III · The AI Revolution", years: "2020–2040" },
   },
   scripts: {
     label: "Cible des scripts d'achat",
@@ -24,6 +25,7 @@ export const fr = {
     money: "Argent",
     data: "Données",
     compute: "Calcul",
+    intelligence: "Intelligence",
     perSecond: "par seconde",
     totalMoney: "Gains au total",
   },
@@ -87,6 +89,31 @@ export const fr = {
     confirm: "Confirmer la renaissance",
     cancel: "Annuler",
     count: "Renaissances : {count}",
+  },
+  renaissance2: {
+    title: "Renaissance II",
+    locked: "Terminez toutes les améliorations de l'ère II pour ouvrir la renaissance II.",
+    lose: "Perdu : argent, données, Calcul, bâtiments et améliorations de l'ère II. Le gain total repart de zéro.",
+    keep: "Gardé : succès, archives, Knowledge, algorithmes achetés.",
+    gain: "Gagné : {points} point(s) d'algorithme, un emplacement d'algorithme de plus, et l'accès à l'ère III.",
+  },
+  algorithms: {
+    title: "Algorithmes",
+    points: "Points disponibles : {points}",
+    slots: "Emplacements : {used} / {total}",
+    cost: "{cost} point(s)",
+    buy: "Acquérir",
+    equip: "Équiper",
+    unequip: "Retirer",
+    owned: "Acquis",
+    empty: "Une renaissance II donne des points à dépenser ici.",
+  },
+  training: {
+    title: "Entraînement de modèles",
+    start: "Lancer un entraînement",
+    running: "Entraînement en cours",
+    models: "Modèles entraînés : {count}",
+    cost: "Coût : {data} données et {compute} Calcul",
   },
   knowledge: {
     title: "Arbre de Knowledge",

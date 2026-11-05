@@ -6,6 +6,11 @@ import {
   clickManual,
   createInitialState,
   renaissance,
+  renaissance2,
+  buyAlgorithm,
+  equipAlgorithm,
+  unequipAlgorithm,
+  startTraining,
   setScriptTarget,
   resolveEvent,
   tick,
@@ -98,6 +103,16 @@ export class GameStore {
   buyKnowledge = (id: string): void => this.update((s) => buyKnowledgeBonus(s, id));
 
   setScriptTarget = (id: BuildingId | null): void => this.update((s) => setScriptTarget(s, id));
+
+  renaissance2 = (): void => this.update((s) => renaissance2(s));
+
+  buyAlgorithm = (id: string): void => this.update((s) => buyAlgorithm(s, id));
+
+  equipAlgorithm = (id: string): void => this.update((s) => equipAlgorithm(s, id));
+
+  unequipAlgorithm = (id: string): void => this.update((s) => unequipAlgorithm(s, id));
+
+  startTraining = (): void => this.update((s) => startTraining(s));
 
   /** Writes the current state to localStorage. Never overwrites a save it cannot read. */
   save = (): void => {

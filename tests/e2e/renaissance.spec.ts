@@ -55,3 +55,57 @@ test("la renaissance I se fait en deux temps et ouvre l'ère II", async ({ page 
   await page.getByRole("button", { name: "Acquérir" }).first().click();
   await expect(page.getByText("Points disponibles : 9")).toBeVisible();
 });
+
+/** A v5 save in era III, with Données and Calcul for a training run. */
+const ERA_THREE = JSON.stringify({
+  schemaVersion: 5,
+  savedAt: "2026-11-05T07:52:57.025Z",
+  state: {
+    schemaVersion: 5,
+    elapsedMs: 0,
+    resources: { money: "0", data: "10000", compute: "100000", intelligence: "0" },
+    totalMoney: "0",
+    totalClicks: 0,
+    buildings: { homePage: 0, forum: 0, shop: 0, shareware: 0, portal: 0, rentedServer: 0, dataCollector: 0, buyScript: 0, database: 0, cloudCluster: 0, datacenter: 0, robotArm: 0, gpuServer: 0, dataLab: 0, agent: 0 },
+    upgrades: {},
+    event: { status: "resolved", id: "y2k", choice: "ignore" },
+    eventsResolved: 1,
+    effects: [],
+    rngSeed: 7,
+    nextEventAtMs: 99999999,
+    archives: {},
+    achievements: {},
+    era: 3,
+    scriptTarget: null,
+    renaissances: 2,
+    renaissances2: 1,
+    algorithmPoints: 3,
+    algorithms: {},
+    equippedAlgorithms: [],
+    models: [],
+    training: null,
+    knowledgePoints: 0,
+    knowledgeBonuses: {},
+  },
+});
+
+test("en ère III, on lance un entraînement de modèle", async ({ page }) => {
+  await page.addInitScript(
+    ([key, value]) => {
+      if (!sessionStorage.getItem("seeded")) {
+        localStorage.setItem(key, value);
+        sessionStorage.setItem("seeded", "1");
+      }
+    },
+    [SAVE_KEY, ERA_THREE],
+  );
+  await page.goto("/");
+
+  const width = page.viewportSize()?.width ?? 1440;
+  if (width < 900) await page.getByRole("button", { name: "Améliorer", exact: true }).click();
+
+  await expect(page.getByText("Ère III · The AI Revolution")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Algorithmes" })).toBeVisible();
+  await page.getByRole("button", { name: "Lancer un entraînement" }).click();
+  await expect(page.getByRole("button", { name: "Entraînement en cours" })).toBeVisible();
+});

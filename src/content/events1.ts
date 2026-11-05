@@ -144,6 +144,9 @@ export const HUMAN_SHARE: Record<BuildingId, number> = {
   cloudCluster: 0.08,
   datacenter: 0.04,
   robotArm: 0.01,
+  gpuServer: 0.03,
+  dataLab: 0.02,
+  agent: 0.01,
 };
 
 /** Game time between two random events: 6 to 10 minutes. */

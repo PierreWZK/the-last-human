@@ -1,15 +1,17 @@
 import type Decimal from "break_infinity.js";
 
 /** Version of the save format. Bump it with a migration when GameState changes shape. */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
-export type ResourceId = "money" | "data" | "compute";
+export type ResourceId = "money" | "data" | "compute" | "intelligence";
 
 export type EraOneBuildingId = "homePage" | "forum" | "shop" | "shareware" | "portal" | "rentedServer";
 
 export type EraTwoBuildingId = "dataCollector" | "buyScript" | "database" | "cloudCluster" | "datacenter" | "robotArm";
 
-export type BuildingId = EraOneBuildingId | EraTwoBuildingId;
+export type EraThreeBuildingId = "gpuServer" | "dataLab" | "agent";
+
+export type BuildingId = EraOneBuildingId | EraTwoBuildingId | EraThreeBuildingId;
 
 export interface BuildingDef {
   id: BuildingId;
@@ -21,7 +23,7 @@ export interface BuildingDef {
   produces: { resource: ResourceId; perSecond: Decimal };
   growth: number;
   /** The era that introduces the building. */
-  era: 1 | 2;
+  era: 1 | 2 | 3;
 }
 
 export type UpgradeTarget =
@@ -41,7 +43,7 @@ export interface UpgradeDef {
   factor: number;
   requires: UpgradeRequirement;
   /** The era that introduces the upgrade. */
-  era: 1 | 2;
+  era: 1 | 2 | 3;
 }
 
 export type UpgradeRequirement =
@@ -105,12 +107,24 @@ export interface GameState {
   archives: Record<string, true>;
   /** Unlocked achievements. */
   achievements: Record<string, true>;
-  /** Current era: 1 until the first renaissance, then 2. */
-  era: 1 | 2;
+  /** Current era: 1 until the first renaissance, 2 after it, 3 after the second. */
+  era: 1 | 2 | 3;
   /** The building the owned scripts buy, as soon as it is affordable (era II). */
   scriptTarget: BuildingId | null;
-  /** Renaissances completed, lifetime. */
+  /** Renaissances completed, lifetime (I and II). */
   renaissances: number;
+  /** Renaissances II completed: each one adds an algorithm slot. */
+  renaissances2: number;
+  /** Algorithm points, spent to buy algorithms. */
+  algorithmPoints: number;
+  /** Algorithms bought. */
+  algorithms: Record<string, true>;
+  /** Algorithms equipped, at most one per slot. */
+  equippedAlgorithms: string[];
+  /** Quality of each trained model (era III). */
+  models: number[];
+  /** Training run in progress: finishes at this game time, or null. */
+  training: { endsAtMs: number } | null;
   /** Knowledge points available to spend on the Knowledge tree. */
   knowledgePoints: number;
   /** Knowledge bonuses bought. */

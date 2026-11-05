@@ -1,6 +1,8 @@
 import type Decimal from "break_infinity.js";
 import { BUILDINGS, MILESTONES, UPGRADES } from "@/content/era1";
 import { BUILDINGS_ERA2, UPGRADES_ERA2 } from "@/content/era2";
+import { ALGORITHMS, BASE_SLOTS, type AlgorithmEffect } from "@/content/algorithms";
+import { BUILDINGS_ERA3, INTELLIGENCE_BONUS, MODEL_INTELLIGENCE_PER_SECOND, TRAINING, UPGRADES_ERA3 } from "@/content/era3";
 import {
   ACHIEVEMENTS,
   ARCHIVES,
@@ -31,12 +33,14 @@ import {
 
 export const MANUAL_BASE = D(1);
 
-export type BuyMode = 1 | 10 | 100 | "max";
+export type BuyMode = number | "max";
 
 /** Every building of every era. Eras only decide which ones the player can see. */
-export const ALL_BUILDINGS = [...BUILDINGS, ...BUILDINGS_ERA2];
+export const ALL_BUILDINGS = [...BUILDINGS, ...BUILDINGS_ERA2, ...BUILDINGS_ERA3];
 
-export const ALL_UPGRADES = [...UPGRADES, ...UPGRADES_ERA2];
+export const ALL_UPGRADES = [...UPGRADES, ...UPGRADES_ERA2, ...UPGRADES_ERA3];
+
+const ALGORITHM_BY_ID = new Map(ALGORITHMS.map((a) => [a.id, a]));
 
 const BUILDING_BY_ID = new Map(ALL_BUILDINGS.map((b) => [b.id, b]));
 const UPGRADE_BY_ID = new Map(ALL_UPGRADES.map((u) => [u.id, u]));
@@ -57,7 +61,7 @@ export function createInitialState(seed = 1): GameState {
   return {
     schemaVersion: SCHEMA_VERSION,
     elapsedMs: 0,
-    resources: { money: ZERO, data: ZERO, compute: ZERO },
+    resources: { money: ZERO, data: ZERO, compute: ZERO, intelligence: ZERO },
     totalMoney: ZERO,
     totalClicks: 0,
     buildings: Object.fromEntries(ALL_BUILDINGS.map((b) => [b.id, 0])) as Record<BuildingId, number>,
@@ -72,6 +76,12 @@ export function createInitialState(seed = 1): GameState {
     era: 1,
     scriptTarget: null,
     renaissances: 0,
+    renaissances2: 0,
+    algorithmPoints: 0,
+    algorithms: {},
+    equippedAlgorithms: [],
+    models: [],
+    training: null,
     knowledgePoints: 0,
     knowledgeBonuses: {},
   };
@@ -154,16 +164,56 @@ export function requirementMet(state: GameState, req: UpgradeRequirement): boole
   }
 }
 
+/** Product of the equipped algorithms' factors of one kind (and of one resource, if given). */
+export function algorithmFactor(state: GameState, kind: AlgorithmEffect["kind"], resource?: ResourceId): number {
+  let m = 1;
+  for (const id of state.equippedAlgorithms) {
+    const e = ALGORITHM_BY_ID.get(id)?.effect;
+    if (!e || e.kind !== kind) continue;
+    if (e.kind === "production" && e.resource !== undefined && e.resource !== resource) continue;
+    m *= e.factor;
+  }
+  return m;
+}
+
+/** Discount on every building cost, from the algorithms. */
+export function costScale(state: GameState): number {
+  return algorithmFactor(state, "buildingCost");
+}
+
+/** Number of algorithms that can be equipped: two, plus one per renaissance II. */
+export function algorithmSlots(state: GameState): number {
+  return BASE_SLOTS + state.renaissances2;
+}
+
+/** Intelligence multiplies all production: 1 + Intelligence × INTELLIGENCE_BONUS. */
+export function intelligenceMultiplier(state: GameState): number {
+  return 1 + state.resources.intelligence.toNumber() * INTELLIGENCE_BONUS;
+}
+
 /** Passive production per second, per resource (buildings only). */
 export function productionPerSecond(state: GameState): Record<ResourceId, Decimal> {
-  const rates: Record<ResourceId, Decimal> = { money: ZERO, data: ZERO, compute: ZERO };
+  const rates: Record<ResourceId, Decimal> = { money: ZERO, data: ZERO, compute: ZERO, intelligence: ZERO };
   const factor = timedFactor(state) * achievementBonus(state) * knowledgeMultiplier(state, "all");
   for (const def of ALL_BUILDINGS) {
     const owned = state.buildings[def.id];
     if (owned === 0) continue;
-    const m = multiplier(state, def.id) * synergyBonus(state, def.id) * milestoneMultiplier(owned) * factor;
-    rates[def.produces.resource] = rates[def.produces.resource].add(def.produces.perSecond.mul(owned).mul(m));
+    const resource = def.produces.resource;
+    const m =
+      multiplier(state, def.id) *
+      synergyBonus(state, def.id) *
+      milestoneMultiplier(owned) *
+      factor *
+      algorithmFactor(state, "production", resource);
+    rates[resource] = rates[resource].add(def.produces.perSecond.mul(owned).mul(m));
   }
+  // Trained models produce Intelligence, which multiplies everything else.
+  const modelRate = state.models.reduce((acc, quality) => acc + quality * MODEL_INTELLIGENCE_PER_SECOND, 0);
+  rates.intelligence = rates.intelligence.add(modelRate);
+  const boost = intelligenceMultiplier(state);
+  rates.money = rates.money.mul(boost);
+  rates.data = rates.data.mul(boost);
+  rates.compute = rates.compute.mul(boost);
   return rates;
 }
 
@@ -186,7 +236,8 @@ export function humanDependency(state: GameState): number {
 export function manualGain(state: GameState): Decimal {
   return MANUAL_BASE.mul(multiplier(state, "manual"))
     .mul(achievementBonus(state))
-    .mul(knowledgeMultiplier(state, "manual"));
+    .mul(knowledgeMultiplier(state, "manual"))
+    .mul(algorithmFactor(state, "manual"));
 }
 
 /** Product of the Knowledge bonuses bought for `target` (manual work, or all production). */
@@ -221,7 +272,7 @@ export function renaissance(state: GameState): GameState {
   if (!canRenaissance(state)) return state;
   return refreshUnlocks({
     ...state,
-    resources: { money: ZERO, data: ZERO, compute: ZERO },
+    resources: { money: ZERO, data: ZERO, compute: ZERO, intelligence: ZERO },
     totalMoney: ZERO,
     buildings: Object.fromEntries(ALL_BUILDINGS.map((b) => [b.id, 0])) as Record<BuildingId, number>,
     upgrades: {},
@@ -245,14 +296,14 @@ export function buyKnowledgeBonus(state: GameState, id: string): GameState {
   };
 }
 
-/** Total price of buying `count` more buildings when `owned` are already owned. */
-export function buildingCost(id: BuildingId, owned: number, count: number): Decimal {
+/** Total price of buying `count` more buildings when `owned` are already owned. `scale` is the algorithm discount. */
+export function buildingCost(id: BuildingId, owned: number, count: number, scale = 1): Decimal {
   const def = getBuilding(id);
   if (count <= 0) return ZERO;
   const g = def.growth;
   const first = def.baseCost.mul(D(g).pow(owned));
   // Geometric series: first * (g^count - 1) / (g - 1)
-  return first.mul(D(g).pow(count).sub(1)).div(g - 1);
+  return first.mul(D(g).pow(count).sub(1)).div(g - 1).mul(scale);
 }
 
 /** Largest number of buildings affordable right now (0 if none). */
@@ -260,13 +311,14 @@ export function maxAffordable(state: GameState, id: BuildingId): number {
   const def = getBuilding(id);
   const money = state.resources[def.costResource];
   const owned = state.buildings[id];
-  const first = def.baseCost.mul(D(def.growth).pow(owned));
+  const scale = costScale(state);
+  const first = def.baseCost.mul(D(def.growth).pow(owned)).mul(scale);
   if (first.gt(money)) return 0;
   // Closed-form estimate, then exact correction against the real cost.
   const ratio = money.mul(def.growth - 1).div(first).add(1);
   let k = Math.max(0, Math.floor(ratio.log10() / Math.log10(def.growth)));
-  while (k > 0 && buildingCost(id, owned, k).gt(money)) k--;
-  while (buildingCost(id, owned, k + 1).lte(money)) k++;
+  while (k > 0 && buildingCost(id, owned, k, scale).gt(money)) k--;
+  while (buildingCost(id, owned, k + 1, scale).lte(money)) k++;
   return k;
 }
 
@@ -276,7 +328,7 @@ export function quote(state: GameState, id: BuildingId, mode: BuyMode) {
   const count = mode === "max" ? maxAffordable(state, id) : mode;
   return {
     count,
-    cost: buildingCost(id, state.buildings[id], count),
+    cost: buildingCost(id, state.buildings[id], count, costScale(state)),
     resource: def.costResource,
   };
 }
@@ -328,6 +380,7 @@ export function tick(state: GameState, dtMs: number): GameState {
   const gainMoney = rates.money.mul(seconds);
   const gainData = rates.data.mul(seconds);
   const gainCompute = rates.compute.mul(seconds);
+  const gainIntelligence = rates.intelligence.mul(seconds);
   const elapsedMs = state.elapsedMs + dtMs;
   let next: GameState = {
     ...state,
@@ -336,14 +389,24 @@ export function tick(state: GameState, dtMs: number): GameState {
       money: state.resources.money.add(gainMoney),
       data: state.resources.data.add(gainData),
       compute: state.resources.compute.add(gainCompute),
+      intelligence: state.resources.intelligence.add(gainIntelligence),
     },
     totalMoney: state.totalMoney.add(gainMoney),
     effects: state.effects.filter((e) => e.untilMs > elapsedMs),
   };
 
   // Scripts buy the chosen building as soon as it is affordable (era II).
+  // Each script buys at most one unit per second of game time (decision of 2026-11-05).
+  const secondsCrossed = Math.floor(elapsedMs / 1000) - Math.floor(state.elapsedMs / 1000);
   const scripts = next.buildings.buyScript;
-  if (scripts > 0 && next.scriptTarget) next = buyBuilding(next, next.scriptTarget, "max");
+  if (secondsCrossed > 0 && scripts > 0 && next.scriptTarget) {
+    const perSecond = Math.floor(scripts * algorithmFactor(next, "scriptRate"));
+    const units = Math.min(perSecond * secondsCrossed, maxAffordable(next, next.scriptTarget));
+    if (units > 0) next = buyBuilding(next, next.scriptTarget, units);
+  }
+
+  // A training run that has finished adds a model.
+  if (next.training && elapsedMs >= next.training.endsAtMs) next = finishTraining(next);
 
   // The scripted event comes first; random events only after it has been answered.
   if (next.event.status === "pending" && next.totalMoney.gte(Y2K_TRIGGER_MONEY)) {
@@ -396,7 +459,7 @@ function applyEffect(state: GameState, effect: EventEffect): GameState {
       return state; // already deducted above
     case "gain": {
       const perSecond = productionPerSecond(state).money.toNumber();
-      const gain = D(Math.max(10, perSecond * effect.seconds));
+      const gain = D(Math.max(10, perSecond * effect.seconds)).mul(algorithmFactor(state, "eventGain"));
       return {
         ...state,
         resources: { ...state.resources, money: state.resources.money.add(gain) },
@@ -408,7 +471,13 @@ function applyEffect(state: GameState, effect: EventEffect): GameState {
         ...state,
         effects: [
           ...state.effects,
-          { kind: effect.effect, factor: effect.factor, untilMs: state.elapsedMs + effect.durationMs },
+          {
+            kind: effect.effect,
+            factor: effect.factor,
+            untilMs:
+              state.elapsedMs +
+              effect.durationMs * (effect.effect === "slowdown" ? algorithmFactor(state, "eventSlowdown") : 1),
+          },
         ],
       };
   }
@@ -417,6 +486,82 @@ function applyEffect(state: GameState, effect: EventEffect): GameState {
 /** Answers the scripted « bug de l'an 2000 » (kept as a named entry point for the scene). */
 export function resolveY2K(state: GameState, choice: "patch" | "ignore"): GameState {
   return resolveEvent(state, choice);
+}
+
+/** Starts a training run (era III): one at a time, paid in Données and Calcul. */
+export function startTraining(state: GameState): GameState {
+  if (state.era !== 3 || state.training) return state;
+  const data = D(TRAINING.dataCost);
+  const compute = D(TRAINING.computeCost);
+  if (state.resources.data.lt(data) || state.resources.compute.lt(compute)) return state;
+  const duration = TRAINING.durationMs * algorithmFactor(state, "trainingTime");
+  return {
+    ...state,
+    resources: { ...state.resources, data: state.resources.data.sub(data), compute: state.resources.compute.sub(compute) },
+    training: { endsAtMs: state.elapsedMs + duration },
+  };
+}
+
+/** Ends the training run: the model's quality is drawn from the game seed. */
+function finishTraining(state: GameState): GameState {
+  const draw = nextRandom(state.rngSeed);
+  const quality = TRAINING.qualityMin + draw.value * (TRAINING.qualityMax - TRAINING.qualityMin);
+  return {
+    ...state,
+    rngSeed: draw.seed,
+    models: [...state.models, Math.round(quality * 100) / 100],
+    training: null,
+  };
+}
+
+/** Renaissance II: needs every upgrade of era II. Opens era III. */
+export function canRenaissance2(state: GameState): boolean {
+  return state.era === 2 && state.event.status !== "open" && UPGRADES_ERA2.every((u) => state.upgrades[u.id]);
+}
+
+/** Algorithm points a renaissance II would grant now: floor(√gains totaux / 50), at least 1. */
+export function algorithmPointGain(state: GameState): number {
+  return Math.max(1, Math.floor(Math.sqrt(state.totalMoney.toNumber()) / 50));
+}
+
+/** Renaissance II: resets everything up to era II. Keeps Knowledge, algorithms and achievements. */
+export function renaissance2(state: GameState): GameState {
+  if (!canRenaissance2(state)) return state;
+  return refreshUnlocks({
+    ...state,
+    resources: { money: ZERO, data: ZERO, compute: ZERO, intelligence: ZERO },
+    totalMoney: ZERO,
+    buildings: Object.fromEntries(ALL_BUILDINGS.map((b) => [b.id, 0])) as Record<BuildingId, number>,
+    upgrades: {},
+    effects: [],
+    era: 3,
+    scriptTarget: null,
+    models: [],
+    training: null,
+    renaissances: state.renaissances + 1,
+    renaissances2: state.renaissances2 + 1,
+    algorithmPoints: state.algorithmPoints + algorithmPointGain(state),
+    nextEventAtMs: state.elapsedMs + EVENT_GAP_MS.min,
+  });
+}
+
+/** Buys an algorithm with algorithm points. It is not equipped automatically. */
+export function buyAlgorithm(state: GameState, id: string): GameState {
+  const def = ALGORITHM_BY_ID.get(id);
+  if (!def || state.algorithms[id] || state.algorithmPoints < def.cost) return state;
+  return { ...state, algorithmPoints: state.algorithmPoints - def.cost, algorithms: { ...state.algorithms, [id]: true } };
+}
+
+/** Equips an owned algorithm, if a slot is free. */
+export function equipAlgorithm(state: GameState, id: string): GameState {
+  if (!state.algorithms[id] || state.equippedAlgorithms.includes(id)) return state;
+  if (state.equippedAlgorithms.length >= algorithmSlots(state)) return state;
+  return { ...state, equippedAlgorithms: [...state.equippedAlgorithms, id] };
+}
+
+export function unequipAlgorithm(state: GameState, id: string): GameState {
+  if (!state.equippedAlgorithms.includes(id)) return state;
+  return { ...state, equippedAlgorithms: state.equippedAlgorithms.filter((x) => x !== id) };
 }
 
 /** Achievements and archives are monotonic: once unlocked, they stay. */
