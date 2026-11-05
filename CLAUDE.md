@@ -14,11 +14,11 @@
 - [x] README et CAHIER-DES-CHARGES mis à jour pour la phase 5, `.env.example` ajouté
 
 ### Session du 2026-11-05 (J22 #2) — branches empilées, rien de poussé
-- Branches : `feat/user-auth` (5) → `feat/offline-progress` (6) → `feat/mobile-ui` (7) → `feat/visual-polish` (8) → `feat/final-ending` (9). Chaque phase a son commit ; rien n'est poussé, aucune PR.
+- PR ouvertes : #8 (phase 5, base main), #9 (phase 6), #10 (phase 7), #11 (phase 8), #12 (phase 9). Chaque PR a pour base la précédente. Aucune fusionnée.
 - Tests : 145 Vitest verts, 68 E2E verts sur 4 largeurs, simulateur OK (fin du jeu à 10 h), lint et typage propres.
 - Fichiers parasites de `prisma init` exclus via `.git/info/exclude` (non supprimés).
 - À valider par l'utilisateur : 3D (non ajoutée, Terre en 2D), valeurs de l'ère V, durée minimale du classement (5 h), « Me masquer du classement ».
-- Reste : PR par phase (à ouvrir), validation manuelle, équilibrage (10 h au lieu de 40 à 60 h), Lighthouse jamais mesuré, phase 10.
+- Reste : validation manuelle, équilibrage (10 h au lieu de 40 à 60 h), Lighthouse jamais mesuré, phase 10.
 
 ### Phases suivantes
 - [ ] Phase 6 : gains hors ligne (24 h max, horloge serveur), récapitulatif
