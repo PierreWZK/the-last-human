@@ -15,7 +15,7 @@ const FRAME_MS = 1000 / 30;
  * The living room of era I. It reads the store directly every frame, so React never
  * re-renders for the animation. With reduced motion it draws one still frame per state change.
  */
-export function Scene({ className = "" }: { className?: string }) {
+export function Scene({ className = "", era = 1 }: { className?: string; era?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -66,7 +66,7 @@ export function Scene({ className = "" }: { className?: string }) {
         height={SCENE_H}
         className={styles.canvas}
         role="img"
-        aria-label={fr.scene.label}
+        aria-label={fr.scene.labels[era as keyof typeof fr.scene.labels] ?? fr.scene.label}
         onClick={() => getStore().click()}
       />
     </div>

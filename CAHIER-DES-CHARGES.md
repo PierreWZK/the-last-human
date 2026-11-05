@@ -187,6 +187,13 @@ Décisions de la phase 7 (2026-11-05) :
 - Desktop : sur un bâtiment sélectionné au clavier, 1, 2 et 3 achètent ×1, ×10 et le maximum.
 - Les cinq onglets restent (Produire, Acheter, Améliorer, Archives, Compte) : « Acheter » est trop utilisé pour passer sous « Produire ».
 
+Décisions de la phase 8 (2026-11-05, à valider) :
+
+- Thèmes d'ère par `data-era` sur `<html>` : I ambre phosphore (monospace), II vert technique, III bleu-violet, IV blanc sur noir avec un accent rouge, V clair et serif, presque vide. Contrastes AA.
+- Scènes : II une allée de datacenter (une baie par bâtiment, scripts qui circulent, bras robot), III un réseau de neurones (un nœud par modèle, barre d'entraînement), IV et V la Terre qui se couvre de machines jusqu'à 7 milliards (échelle logarithmique), avec en V une seule personne debout.
+- **3D** : pas de three.js pour l'instant. La Terre est dessinée en 2D, c'est le repli prévu au §13, toujours disponible. Ajouter three.js (environ 600 Ko) reste possible si vous le validez.
+- Animations : chiffre qui rebondit à l'achat, transition d'ère plein écran (3 s, sans bloquer les clics), feuilles qui montent. Tout est coupé par `prefers-reduced-motion`.
+
 ### 5.6 Succès
 
 Catégories : progression, production, découverte, renaissance, collection (Human Archives), narration, défis (par exemple « finir l'ère I sans cliquer après la 10e minute »). Chaque succès donne +1 % de production globale. Quelques-uns débloquent un élément cosmétique (thème de terminal, son de démarrage).
@@ -390,7 +397,7 @@ Une branche et une Pull Request vers `main` par phase. Pas de fusion sans valida
 | 5 | `feat/user-auth` (une seule PR, comptes et sauvegarde cloud) | Comptes pseudo ou email, sauvegarde cloud, révisions, appareil actif, reprise de la partie invitée | Changer d'appareil sans perte ; impossible de lire la sauvegarde d'un autre |
 | 6 | `feat/offline-progress` | Gains hors ligne sur horloge serveur, récapitulatif | Jamais plus de 24 h ; manipuler l'horloge ne rapporte rien. ✅ Code écrit |
 | 7 | `feat/mobile-ui` | Expérience mobile avancée, gestes, performances | Tests Playwright sur 4 tailles ; Lighthouse mobile dans les cibles. ✅ Code écrit (Lighthouse non mesuré) |
-| 8 | `feat/visual-polish` | Thèmes des cinq ères, animations, 3D et repli | 3D facultative, repli 2D testé, 30 images/s minimum sur mobile milieu de gamme |
+| 8 | `feat/visual-polish` | Thèmes des cinq ères, animations, 3D et repli | 3D facultative, repli 2D testé, 30 images/s minimum sur mobile milieu de gamme. ✅ Code écrit (2D seule, 3D à valider) |
 | 9 | `feat/final-ending` | Renaissance IV (AI Cores, politiques de civilisation), ère V, séquence finale, écran final, archive figée, « Nouvelle humanité », classement | Fin définitive ; classement alimenté par le serveur |
 | 10 | `chore/stabilize` | Audit de sécurité, tests complets, performances, déploiement Coolify, docs finales | En ligne, tous les tests verts, docs à jour |
 | V2 | — | Google, Discord, anglais | — |

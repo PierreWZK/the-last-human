@@ -16,7 +16,51 @@
   --space-4: 1rem;
   --space-6: 1.5rem;
 
+  --font: "Consolas", "Lucida Console", "Courier New", monospace;
+
   color-scheme: dark;
+}
+
+/* Thèmes d'ère (cahier §11), posés par data-era sur <html>. Contrastes AA vérifiés sur --ink-raised. */
+/* II : tableaux de bord techniques, racks, typographie plus nette. */
+html[data-era="2"] {
+  --ink: #0a1214;
+  --ink-raised: #111d20;
+  --phosphor: #6ff0c4;
+  --phosphor-dim: #4fb595;
+  --line: #1f3a38;
+  --font: "Segoe UI", "Helvetica Neue", Arial, system-ui, sans-serif;
+}
+
+/* III : visualisations de données, réseaux neuronaux. */
+html[data-era="3"] {
+  --ink: #0b0b16;
+  --ink-raised: #14142a;
+  --phosphor: #a9b8ff;
+  --phosphor-dim: #7f8de0;
+  --line: #2a2a50;
+  --font: "Segoe UI", "Helvetica Neue", Arial, system-ui, sans-serif;
+}
+
+/* IV : abstraction, échelle, densité. */
+html[data-era="4"] {
+  --ink: #050505;
+  --ink-raised: #101010;
+  --phosphor: #f0f0f0;
+  --phosphor-dim: #9a9a9a;
+  --line: #2a2a2a;
+  --font: "Segoe UI", "Helvetica Neue", Arial, system-ui, sans-serif;
+}
+
+/* V : minimalisme, beaucoup de vide, calme. Le seul thème clair. */
+html[data-era="5"] {
+  --ink: #f4f2ee;
+  --ink-raised: #ebe8e2;
+  --phosphor: #1c1b19;
+  --phosphor-dim: #5f5b55;
+  --line: #d4cfc6;
+  --font: Georgia, "Times New Roman", serif;
+  color-scheme: light;
 }
 
 *,
@@ -29,9 +73,10 @@
 
 html,
 body {
+  transition: background-color 600ms ease, color 600ms ease;
   background: var(--ink);
   color: var(--phosphor);
-  font-family: "Consolas", "Lucida Console", "Courier New", monospace;
+  font-family: var(--font);
   font-size: 16px;
   line-height: 1.45;
   -webkit-text-size-adjust: 100%;
