@@ -41,10 +41,11 @@ import { fr, t } from "@/i18n/fr";
 import { ZERO } from "@/game/decimal";
 import styles from "./GameScreen.module.css";
 import { Scene } from "./Scene";
+import { AccountPanel, CloudBanner } from "./AccountPanel";
 
-type Tab = "produce" | "buy" | "upgrade" | "archives";
+type Tab = "produce" | "buy" | "upgrade" | "archives" | "account";
 
-const SERVER_SNAPSHOT: StoreSnapshot = { state: createInitialState(), notice: null, clicks: 0 };
+const SERVER_SNAPSHOT: StoreSnapshot = { state: createInitialState(), notice: null, clicks: 0, readOnly: false };
 
 export function GameScreen() {
   const store = getStore();
@@ -73,8 +74,10 @@ export function GameScreen() {
         </p>
       )}
 
+      <CloudBanner />
+
       <nav className={styles.tabs} aria-label="Sections">
-        {(["produce", "buy", "upgrade", "archives"] as const).map((key) => (
+        {(["produce", "buy", "upgrade", "archives", "account"] as const).map((key) => (
           <button
             key={key}
             type="button"
@@ -204,6 +207,11 @@ export function GameScreen() {
         <section className={`${styles.window} ${tab === "archives" ? styles.active : ""}`} aria-labelledby="w-arch">
           <h2 id="w-arch" className={styles.windowTitle}>{fr.archives.title}</h2>
           <ArchivesPanel state={state} />
+        </section>
+
+        <section className={`${styles.window} ${tab === "account" ? styles.active : ""}`} aria-labelledby="w-account">
+          <h2 id="w-account" className={styles.windowTitle}>{fr.account.title}</h2>
+          <AccountPanel />
         </section>
       </div>
 
@@ -535,7 +543,7 @@ function NeuralGridPanel({ state, store }: { state: GameState; store: ReturnType
           </button>
         ))}
       </div>
-      <div className={styles.grid}>
+      <div className={styles.coreGrid}>
         {state.neuralGrid.map((id, cell) =>
           id ? (
             <button
