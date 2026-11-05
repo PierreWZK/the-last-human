@@ -96,6 +96,8 @@ export const ARCHIVES: ArchiveDef[] = [
   { id: "last-invoice", title: "La dernière facture papier", text: "Le client a demandé un virement. La facture est restée dans le classeur.", trigger: { kind: "human", below: 0.5 } },
   { id: "empty-desk", title: "Le bureau vide", text: "Les chaises tournent encore un peu, puis s'arrêtent.", trigger: { kind: "human", below: 0.25 } },
   { id: "goodbye-message", title: "Un message d'adieu", text: "« Ne vous inquiétez pas, tout est sous contrôle. » Personne ne sait qui l'a écrit.", trigger: { kind: "human", below: 0.1 } },
+  { id: "last-trade", title: "Le dernier métier", text: "Une horlogère répare encore des montres. Personne ne lui en apporte, mais elle ouvre tous les matins.", trigger: { kind: "human", below: 0.01 } },
+  { id: "last-human", title: "Le dernier humain", text: "Il n'y a plus de travail à faire. Il reste quelqu'un pour le remarquer.", trigger: { kind: "human", below: 0.000001 } },
   { id: "y2k-night", title: "1900, une nuit sans incident", text: "Minuit est passé. Les dates ont tenu, et personne ne s'en est rendu compte.", trigger: { kind: "event", id: Y2K_ID } },
 ];
 

@@ -21,12 +21,15 @@ model User {
   username        String?        @unique
   /// Pseudo tel que le joueur l'a tapé.
   displayUsername String?
+  /// Le joueur peut se masquer du classement public (profil).
+  hideFromLeaderboard Boolean     @default(false)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   sessions        Session[]
   accounts        Account[]
   save            Save?
   snapshots       SaveSnapshot[]
+  runs            Run[]
 
   @@map("user")
 }
@@ -104,4 +107,22 @@ model SaveSnapshot {
 
   @@index([userId, revision])
   @@map("save_snapshot")
+}
+
+/// Une humanité jouée avec un compte. Début et fin viennent de l'horloge du serveur (cahier §9).
+model Run {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Identifiant tiré par le client à chaque « Nouvelle humanité » (GameState.runId).
+  runId       String
+  startedAt   DateTime  @default(now())
+  endedAt     DateTime?
+  durationSec Int?
+  /// Faux si la durée est sous le minimum théorique (anti-triche) : la fin compte, pas au classement.
+  valid       Boolean   @default(false)
+
+  @@unique([userId, runId])
+  @@index([valid, durationSec])
+  @@map("run")
 }

@@ -27,6 +27,11 @@ import {
   renaissance2,
   canRenaissance3,
   renaissance3,
+  canRenaissance4,
+  renaissance4,
+  buyPolicy,
+  giveDirective,
+  nextDirective,
   placeCore,
   startTraining,
   requirementMet as requirementsMet,
@@ -44,6 +49,7 @@ import { ALGORITHMS } from "@/content/algorithms";
 import { UPGRADES_ERA2 } from "@/content/era2";
 import { UPGRADES_ERA3 } from "@/content/era3";
 import { CORES } from "@/content/neural";
+import { POLICIES } from "@/content/era5";
 import type { BuildingId, GameState } from "@/game/types";
 
 export interface Unlock {
@@ -69,6 +75,10 @@ export interface SimResult {
   renaissance2Minute: number | null;
   /** Game minute of the third renaissance (era IV opens), or null if never. */
   renaissance3Minute: number | null;
+  /** Game minute of the fourth renaissance (era V opens), or null if never. */
+  renaissance4Minute: number | null;
+  /** Game minute of the end of the game, or null if never. */
+  endMinute: number | null;
   models: number;
   /** Era III upgrades still unbought at the end of the run (blocks renaissance III). */
   missingEra3Upgrades: string[];
@@ -97,6 +107,8 @@ export function simulate({ hours, clicksPerSecond }: SimOptions): SimResult {
   let renaissanceMinute: number | null = null;
   let renaissance2Minute: number | null = null;
   let renaissance3Minute: number | null = null;
+  let renaissance4Minute: number | null = null;
+  let endMinute: number | null = null;
 
   const totalSeconds = Math.round(hours * 3600);
   for (let second = 1; second <= totalSeconds; second++) {
@@ -131,6 +143,25 @@ export function simulate({ hours, clicksPerSecond }: SimOptions): SimResult {
       renaissance3Minute ??= minute;
       unlocks.push({ minute, label: "Renaissance : ère IV" });
     }
+    if (canRenaissance4(state)) {
+      state = renaissance4(state);
+      for (const p of [...POLICIES].sort((a, z) => a.cost - z.cost)) state = buyPolicy(state, p.id);
+      renaissance4Minute ??= minute;
+      unlocks.push({ minute, label: "Renaissance : ère V" });
+    }
+    if (state.era === 5) {
+      const d = nextDirective(state);
+      if (d) {
+        const given = giveDirective(state, d.id);
+        if (given !== state) unlocks.push({ minute, label: `Directive : ${d.name}` });
+        state = given;
+      }
+    }
+    if (state.endedAtMs !== null) {
+      endMinute = minute;
+      unlocks.push({ minute, label: "Fin du jeu" });
+      break;
+    }
   }
 
   const rates = productionPerSecond(state);
@@ -142,6 +173,8 @@ export function simulate({ hours, clicksPerSecond }: SimOptions): SimResult {
     renaissanceMinute,
     renaissance2Minute,
     renaissance3Minute,
+    renaissance4Minute,
+    endMinute,
     models: state.models.length,
     missingEra3Upgrades: UPGRADES_ERA3.filter((u) => !state.upgrades[u.id]).map((u) => u.name),
     finalRobots: formatNumber(state.resources.robots),
@@ -274,6 +307,9 @@ function report(label: string, result: SimResult, hours: number): boolean {
   console.log(
     `Renaissance III (ère IV) : ${result.renaissance3Minute === null ? "jamais" : `à ${(result.renaissance3Minute / 60).toFixed(1)} h`}, robots : ${result.finalRobots}, Autonomie : ${result.finalAutonomy}`,
   );
+  console.log(
+    `Renaissance IV (ère V) : ${result.renaissance4Minute === null ? "jamais" : `à ${(result.renaissance4Minute / 60).toFixed(1)} h`}, fin du jeu : ${result.endMinute === null ? "jamais" : `à ${(result.endMinute / 60).toFixed(1)} h`}`,
+  );
   if (result.missingEra3Upgrades.length) console.log(`Améliorations de l'ère III manquantes : ${result.missingEra3Upgrades.join(", ")}`);
   if (result.missingEra2Upgrades.length) console.log(`Améliorations de l'ère II manquantes : ${result.missingEra2Upgrades.join(", ")}`);
   for (const era of [2, 3, 4]) {
@@ -303,17 +339,18 @@ function report(label: string, result: SimResult, hours: number): boolean {
     maxGap <= 30 &&
     result.renaissanceMinute !== null &&
     result.renaissance2Minute !== null &&
-    result.renaissance3Minute !== null;
+    result.renaissance3Minute !== null &&
+    result.endMinute !== null;
   console.log(
     ok
       ? "→ cibles atteintes"
-      : "→ cibles NON atteintes (rythme 2–5 min, ère I entre 6 et 10 h, écart ≤ 30 min, ères II, III et IV atteintes)",
+      : "→ cibles NON atteintes (rythme 2–5 min, ère I entre 6 et 10 h, écart ≤ 30 min, ères II à V atteintes, fin du jeu)",
   );
   return ok;
 }
 
 function main() {
-  const hours = Number(process.env.SIM_HOURS ?? 12);
+  const hours = Number(process.env.SIM_HOURS ?? 24);
   const active = simulate({ hours, clicksPerSecond: 1 });
   const idle = simulate({ hours, clicksPerSecond: 0 });
   const ok = report("actif, 1 clic/s", active, hours);

@@ -22,7 +22,8 @@ await server.start();
 const app = spawn(`npm run build && npm run start -- -p ${port}`, {
   shell: true,
   stdio: "inherit",
-  env: { ...process.env, DATABASE_URL: `postgresql://postgres:postgres@${server.getServerConn()}/postgres?sslmode=disable` },
+  // One session only: PGlite mixes the messages of concurrent connections.
+  env: { ...process.env, DATABASE_POOL_MAX: "1", DATABASE_URL: `postgresql://postgres:postgres@${server.getServerConn()}/postgres?sslmode=disable` },
 });
 
 async function shutdown(code) {

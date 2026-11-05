@@ -13,11 +13,12 @@
 - [x] Tests E2E des phases 1 à 4 ter : 40 verts sur 4 largeurs
 - [x] README et CAHIER-DES-CHARGES mis à jour pour la phase 5, `.env.example` ajouté
 
-### Reste à faire (phase 5)
-- [ ] **Tests E2E de compte** : `tests/e2e/account.spec.ts`. Le test « second appareil » échoue (5 échecs sur 4 largeurs). Cause probable : PGlite ne gère qu'une connexion à la fois. `scripts/e2e-server.mjs` et `package.json` (`db:dev`) passent à `maxConnections: 1` : **à relancer pour vérifier**.
-- [ ] **Commit et PR** : rien n'est commité. La branche `feat/user-auth` existe localement. Le commit a été interrompu.
-- [ ] **Fichiers parasites** de `prisma init` à la racine : `.agents/`, `.claude/`, `.windsurf/`, `skills-lock.json`. Leur suppression a été refusée par l'outil. **Ne pas les commiter**. À supprimer à la main ou à valider.
-- [ ] **Validation utilisateur** de la phase 5 (test manuel), puis fusion de la PR. Ne jamais fusionner sans accord.
+### Session du 2026-11-05 (J22 #2) — branches empilées, rien de poussé
+- PR ouvertes : #8 (phase 5, base main), #9 (phase 6), #10 (phase 7), #11 (phase 8), #12 (phase 9). Chaque PR a pour base la précédente. Aucune fusionnée.
+- Tests : 145 Vitest verts, 68 E2E verts sur 4 largeurs, simulateur OK (fin du jeu à 10 h), lint et typage propres.
+- Fichiers parasites de `prisma init` exclus via `.git/info/exclude` (non supprimés).
+- À valider par l'utilisateur : 3D (non ajoutée, Terre en 2D), valeurs de l'ère V, durée minimale du classement (5 h), « Me masquer du classement ».
+- Reste : validation manuelle, équilibrage (10 h au lieu de 40 à 60 h), Lighthouse jamais mesuré, phase 10.
 
 ### Phases suivantes
 - [ ] Phase 6 : gains hors ligne (24 h max, horloge serveur), récapitulatif
@@ -75,3 +76,5 @@ npx prisma migrate deploy     # applique les migrations à la base locale
 - Une classe CSS `.grid` existait déjà et écrasait la mise en page de la grille neuronale (renommée `.coreGrid`).
 - Le dossier de la base PGlite doit être à la racine (`.pglite/`), pas dans `.data/`.
 - Les tests d'inscription en rafale tombent sur la limite de requêtes (429).
+- PGlite ne sert qu'une session : en E2E, `maxConnections: 1` **et** `DATABASE_POOL_MAX=1` pour Prisma. Sinon `ConnectionClosed` (pool > 1) ou `bind message supplies…` (plusieurs connexions entremêlées).
+- Les sauvegardes de test doivent être datées du moment du test, sinon le rattrapage hors ligne les fausse.

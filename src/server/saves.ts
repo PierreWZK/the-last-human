@@ -1,6 +1,7 @@
 import { OFFLINE_CAP_MS } from "@/game/offline";
 import { deserialize } from "@/game/save";
 import type { PrismaClient } from "@/generated/prisma/client";
+import { recordRun } from "./leaderboard";
 
 /**
  * Sauvegarde cloud (cahier §8). Chaque écriture part d'une révision ; une révision dépassée est
@@ -77,6 +78,7 @@ export async function writeSave(db: PrismaClient, userId: string, input: unknown
     }
     await tx.saveSnapshot.create({ data: { userId, revision, data } });
     await tx.saveSnapshot.deleteMany({ where: { userId, revision: { lte: revision - SNAPSHOTS_KEPT } } });
+    await recordRun(tx, userId, parsed.state);
     return ok({ revision });
   });
 }

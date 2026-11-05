@@ -69,7 +69,8 @@ test("ouvrir la partie sur un second appareil met le premier en lecture seule", 
   await signUp(page, username);
   await expect(page.getByText(/révision 1/)).toBeVisible();
 
-  // Second device: same account, its own storage. It loads the server game and takes over.
+  // Second device: same account, its own storage. It shows the server game read-only and offers
+  // « Reprendre ici » (cahier §8); taking over makes the first device read-only.
   const { context: second, page: phone } = await newVisitor(browser, page);
   await phone.goto("/");
   await openAccount(phone);
@@ -78,6 +79,7 @@ test("ouvrir la partie sur un second appareil met le premier en lecture seule", 
   await phone.getByLabel(/Mot de passe/).fill("motdepasse-e2e");
   await phone.getByRole("button", { name: "Se connecter", exact: true }).last().click();
   await expect(phone.getByText(`Connecté : ${username}`)).toBeVisible();
+  await phone.getByRole("button", { name: "Reprendre ici" }).click();
   await expect(phone.getByText(/Sauvegardé sur le serveur/)).toBeVisible();
 
   // The first device's next save is refused: it becomes read-only and offers « Reprendre ici ».

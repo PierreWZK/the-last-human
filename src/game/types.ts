@@ -1,11 +1,11 @@
 import type Decimal from "break_infinity.js";
 
 /** Version of the save format. Bump it with a migration when GameState changes shape. */
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
-export type Era = 1 | 2 | 3 | 4;
+export type Era = 1 | 2 | 3 | 4 | 5;
 
-export type ResourceId = "money" | "data" | "compute" | "intelligence" | "robots" | "autonomy";
+export type ResourceId = "money" | "data" | "compute" | "intelligence" | "robots" | "autonomy" | "control";
 
 export type EraOneBuildingId = "homePage" | "forum" | "shop" | "shareware" | "portal" | "rentedServer";
 
@@ -139,4 +139,22 @@ export interface GameState {
   knowledgePoints: number;
   /** Knowledge bonuses bought. */
   knowledgeBonuses: Record<string, true>;
+  /** Renaissances IV completed. */
+  renaissances4: number;
+  /** AI Cores not spent yet (renaissance IV). */
+  aiCores: number;
+  /** Civilisation policies bought with AI Cores. */
+  policies: Record<string, true>;
+  /** Directives given in era V, in order. */
+  directives: Record<string, true>;
+  /** Game time when each era began, index era − 1 (era I starts at 0). */
+  eraStartedMs: number[];
+  /** Notable choices for the final screen: first answer of each event, « eventId:choiceId ». */
+  journal: string[];
+  /** Identifies this humanity for the leaderboard; a new one per « Nouvelle humanité ». */
+  runId: string;
+  /** Humanities finished before this one (no bonus, only counted). */
+  endings: number;
+  /** Game time of the end; once set, the game is a frozen archive. */
+  endedAtMs: number | null;
 }

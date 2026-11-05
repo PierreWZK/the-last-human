@@ -492,3 +492,54 @@
 .screen[data-era="5"] .window {
   background: transparent;
 }
+
+/* Phase 9 : la fin. Presque rien à l'écran, un dialogue lent, puis le bilan. */
+.ending {
+  display: grid;
+  gap: var(--space-6);
+  max-width: 40rem;
+  margin: 0 auto;
+  padding-block: 12vh var(--space-6);
+}
+
+.dialogue {
+  display: grid;
+  gap: var(--space-4);
+  justify-items: start;
+}
+
+.dialogueLine {
+  color: var(--phosphor);
+  font-size: var(--text-md);
+  line-height: 1.6;
+  animation: lineIn 1600ms ease-out;
+}
+
+@keyframes lineIn {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+}
+
+.finalScreen {
+  display: grid;
+  gap: var(--space-4);
+  animation: lineIn 1600ms ease-out;
+}
+
+.check {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-height: 44px;
+  color: var(--phosphor);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.check input {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--phosphor);
+}

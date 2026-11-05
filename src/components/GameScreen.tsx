@@ -7,6 +7,7 @@ import { ALGORITHMS } from "@/content/algorithms";
 import { TRAINING } from "@/content/era3";
 import { AUTO_TRAINING_AUTONOMY } from "@/content/era4";
 import { CORES } from "@/content/neural";
+import { DIRECTIVES, ERA5_START_MACHINES, POLICIES, ROBOTS_FOR_RENAISSANCE4 } from "@/content/era5";
 import {
   canBuyUpgrade,
   algorithmPointGain,
@@ -14,6 +15,11 @@ import {
   canRenaissance,
   canRenaissance2,
   canRenaissance3,
+  canRenaissance4,
+  aiCoreGain,
+  automation,
+  directiveCost,
+  nextDirective,
   coreFactor,
   neuralCoreGain,
   replicationRate,
@@ -44,6 +50,8 @@ import { ZERO } from "@/game/decimal";
 import styles from "./GameScreen.module.css";
 import { Scene } from "./Scene";
 import { AccountPanel, CloudBanner } from "./AccountPanel";
+import { EndingScreen } from "./EndingScreen";
+import { Leaderboard } from "./Leaderboard";
 
 type Tab = "produce" | "buy" | "upgrade" | "archives" | "account";
 
@@ -90,9 +98,21 @@ export function GameScreen() {
 
   const rates = productionPerSecond(state);
   const swipe = useSwipe(tab, setTab);
-  const pinned = (["money", "data", "compute", "intelligence", "robots"] as const).filter(
-    (r) => r === "money" || r === "data" || (r === "compute" && state.era >= 2) || (r === "intelligence" && state.era >= 3) || (r === "robots" && state.era >= 4),
-  );
+  const pinned =
+    state.era === 5
+      ? (["robots", "control"] as const)
+      : (["money", "data", "compute", "intelligence", "robots"] as const).filter(
+          (r) => r === "money" || r === "data" || (r === "compute" && state.era >= 2) || (r === "intelligence" && state.era >= 3) || (r === "robots" && state.era >= 4),
+        );
+
+  if (state.endedAtMs !== null) {
+    return (
+      <main className={styles.screen} data-era={state.era}>
+        <CloudBanner />
+        <EndingScreen state={state} />
+      </main>
+    );
+  }
 
   return (
     <main className={styles.screen} data-era={state.era}>
@@ -141,24 +161,24 @@ export function GameScreen() {
         <section className={`${styles.window} ${tab === "produce" ? styles.active : ""}`} aria-labelledby="w-res">
           <h2 id="w-res" className={styles.windowTitle}>{fr.windows.resources}</h2>
           <dl className={styles.resources}>
-            <div>
+            {state.era < 5 && <div>
               <dt>{fr.resources.money}</dt>
               <dd className={styles.big}>{formatNumber(state.resources.money)}</dd>
               <dd className={styles.rate}>+{formatNumber(rates.money)} {fr.resources.perSecond}</dd>
-            </div>
-            <div>
+            </div>}
+            {state.era < 5 && <div>
               <dt>{fr.resources.data}</dt>
               <dd className={styles.big}>{formatNumber(state.resources.data)}</dd>
               <dd className={styles.rate}>+{formatNumber(rates.data)} {fr.resources.perSecond}</dd>
-            </div>
-            {state.era >= 3 && (
+            </div>}
+            {state.era >= 3 && state.era < 5 && (
               <div>
                 <dt>{fr.resources.intelligence}</dt>
                 <dd className={styles.big}>{formatNumber(state.resources.intelligence)}</dd>
                 <dd className={styles.rate}>+{formatNumber(rates.intelligence)} {fr.resources.perSecond}</dd>
               </div>
             )}
-            {state.era >= 2 && (
+            {state.era >= 2 && state.era < 5 && (
               <div>
                 <dt>{fr.resources.compute}</dt>
                 <dd className={styles.big}>{formatNumber(state.resources.compute)}</dd>
@@ -166,7 +186,7 @@ export function GameScreen() {
               </div>
             )}
             {state.era >= 4 &&
-              (["robots", "autonomy"] as const).map((r) => (
+              (state.era === 5 ? (["robots", "control"] as const) : (["robots", "autonomy"] as const)).map((r) => (
                 <div key={r}>
                   <dt>{fr.resources[r]}</dt>
                   <dd className={styles.big}>{formatNumber(state.resources[r])}</dd>
@@ -174,26 +194,35 @@ export function GameScreen() {
                 </div>
               ))}
           </dl>
-          <p className={styles.muted}>
-            {fr.resources.totalMoney} : {formatNumber(state.totalMoney)}
-          </p>
+          {state.era < 5 && (
+            <p className={styles.muted}>
+              {fr.resources.totalMoney} : {formatNumber(state.totalMoney)}
+            </p>
+          )}
           <p className={styles.muted}>
             {t(fr.human.gauge, { percent: Math.round(humanDependency(state) * 100) })}
           </p>
 
-          <h2 className={styles.windowTitle}>{fr.windows.manual}</h2>
-          <button type="button" className={styles.manual} onClick={store.click}>
-            {fr.manual.button}
-          </button>
-          <p className={styles.muted}>{t(fr.manual.gain, { amount: formatNumber(manualGain(state)) })}</p>
-          <p className={styles.muted}>{fr.manual.hint}</p>
+          {state.era === 5 ? (
+            <p className={styles.itemText}>{fr.era5.noManual}</p>
+          ) : (
+            <>
+              <h2 className={styles.windowTitle}>{fr.windows.manual}</h2>
+              <button type="button" className={styles.manual} onClick={store.click}>
+                {fr.manual.button}
+              </button>
+              <p className={styles.muted}>{t(fr.manual.gain, { amount: formatNumber(manualGain(state)) })}</p>
+              <p className={styles.muted}>{fr.manual.hint}</p>
+            </>
+          )}
 
           <EventWindow state={state} onAnswer={store.answerEvent} />
         </section>
 
         <section className={`${styles.window} ${styles.buyWindow} ${tab === "buy" ? styles.active : ""}`} aria-labelledby="w-buy">
           <h2 id="w-buy" className={styles.windowTitle}>{fr.windows.buildings}</h2>
-          {state.era >= 2 && (
+          {state.era === 5 && <p className={styles.itemText}>{fr.era5.empty}</p>}
+          {state.era >= 2 && state.era < 5 && (
             <div className={styles.item}>
               <label className={styles.itemName} htmlFor="script-target">
                 {fr.scripts.label}
@@ -226,7 +255,8 @@ export function GameScreen() {
 
         <section className={`${styles.window} ${tab === "upgrade" ? styles.active : ""}`} aria-labelledby="w-up">
           <h2 id="w-up" className={styles.windowTitle}>{fr.windows.upgrades}</h2>
-          <UpgradeList state={state} onBuy={store.upgrade} />
+          {state.era < 5 && <UpgradeList state={state} onBuy={store.upgrade} />}
+          <DirectivesPanel state={state} onGive={store.giveDirective} />
           <RenaissancePanel state={state} onRenaissance={store.renaissance} />
           <KnowledgeTree state={state} onBuy={store.buyKnowledge} />
           <NextRenaissancePanel
@@ -247,6 +277,19 @@ export function GameScreen() {
           />
           <AlgorithmsPanel state={state} store={store} />
           <TrainingPanel state={state} onStart={store.startTraining} />
+          <NextRenaissancePanel
+            state={state}
+            era={4}
+            ready={canRenaissance4(state)}
+            texts={{
+              ...fr.renaissance4,
+              locked: t(fr.renaissance4.locked, { robots: formatNumber(D(ROBOTS_FOR_RENAISSANCE4)) }),
+              lose: t(fr.renaissance4.lose, { machines: formatNumber(D(ERA5_START_MACHINES)) }),
+            }}
+            gain={aiCoreGain(state)}
+            onRenaissance={store.renaissance4}
+          />
+          <PoliciesPanel state={state} onBuy={store.buyPolicy} />
           <NeuralGridPanel state={state} store={store} />
         </section>
 
@@ -258,6 +301,7 @@ export function GameScreen() {
         <section className={`${styles.window} ${tab === "account" ? styles.active : ""}`} aria-labelledby="w-account">
           <h2 id="w-account" className={styles.windowTitle}>{fr.account.title}</h2>
           <AccountPanel />
+          <Leaderboard />
         </section>
       </div>
 
@@ -505,7 +549,7 @@ function NextRenaissancePanel({
   onRenaissance,
 }: {
   state: GameState;
-  era: 2 | 3;
+  era: 2 | 3 | 4;
   ready: boolean;
   texts: { title: string; locked: string; lose: string; keep: string; gain: string };
   gain: number;
@@ -599,7 +643,7 @@ function AlgorithmsPanel({ state, store }: { state: GameState; store: ReturnType
 }
 
 function TrainingPanel({ state, onStart }: { state: GameState; onStart: () => void }) {
-  if (state.era < 3) return null;
+  if (state.era < 3 || state.era === 5) return null;
   const affordable = state.resources.data.gte(TRAINING.dataCost) && state.resources.compute.gte(TRAINING.computeCost);
   return (
     <div className={styles.event}>
@@ -621,6 +665,80 @@ function TrainingPanel({ state, onStart }: { state: GameState; onStart: () => vo
       {state.era >= 4 && (
         <p className={styles.muted}>{t(fr.autonomy.autoTraining, { threshold: AUTO_TRAINING_AUTONOMY })}</p>
       )}
+    </div>
+  );
+}
+
+/** Civilisation policies (renaissance IV), bought once each with AI Cores. */
+function PoliciesPanel({ state, onBuy }: { state: GameState; onBuy: (id: string) => void }) {
+  if (state.renaissances4 === 0) return null;
+  return (
+    <div className={styles.event}>
+      <h2 className={styles.windowTitle}>{fr.policies.title}</h2>
+      <p className={styles.muted}>{t(fr.policies.cores, { count: state.aiCores })}</p>
+      <ul className={styles.list}>
+        {POLICIES.map((p) => {
+          const owned = Boolean(state.policies[p.id]);
+          return (
+            <li key={p.id} className={styles.item}>
+              <div className={styles.itemHead}>
+                <span className={styles.itemName}>{p.name}</span>
+                <span className={styles.muted}>{t(fr.policies.cost, { cost: p.cost })}</span>
+              </div>
+              <p className={styles.itemText}>{p.description}</p>
+              <div className={styles.buyRow}>
+                <button type="button" className={styles.button} disabled={owned || state.aiCores < p.cost} onClick={() => onBuy(p.id)}>
+                  {owned ? fr.policies.owned : fr.policies.buy}
+                </button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+/** Era V: the player no longer produces, they give directives, in order, paid in Contrôle. */
+function DirectivesPanel({ state, onGive }: { state: GameState; onGive: (id: string) => void }) {
+  if (state.era !== 5) return null;
+  const next = nextDirective(state);
+  return (
+    <div className={styles.event}>
+      <h2 className={styles.windowTitle}>{fr.era5.directivesTitle}</h2>
+      <p className={styles.muted}>{fr.era5.directivesHint}</p>
+      <p className={styles.muted}>{t(fr.era5.automation, { percent: Math.round(automation(state) * 100) })}</p>
+      <p className={styles.muted}>{t(fr.era5.machines, { count: formatNumber(state.resources.robots) })}</p>
+      <ul className={styles.list}>
+        {DIRECTIVES.map((d) => {
+          const given = Boolean(state.directives[d.id]);
+          const isNext = next?.id === d.id;
+          const cost = directiveCost(state, d.id);
+          return (
+            <li key={d.id} className={styles.item}>
+              <span className={styles.itemName}>{d.name}</span>
+              <p className={styles.itemText}>{d.description}</p>
+              <div className={styles.buyRow}>
+                {given ? (
+                  <p className={styles.muted}>{fr.era5.given}</p>
+                ) : isNext ? (
+                  <button
+                    type="button"
+                    className={styles.button}
+                    disabled={state.resources.control.lt(cost)}
+                    onClick={() => onGive(d.id)}
+                  >
+                    {t(fr.era5.give, { cost: formatNumber(D(cost)) })}
+                  </button>
+                ) : (
+                  <p className={styles.muted}>{fr.era5.later}</p>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <p className={styles.muted}>{fr.era5.goal}</p>
     </div>
   );
 }
