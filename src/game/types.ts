@@ -1,11 +1,15 @@
 import type Decimal from "break_infinity.js";
 
 /** Version of the save format. Bump it with a migration when GameState changes shape. */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
-export type ResourceId = "money" | "data";
+export type ResourceId = "money" | "data" | "compute";
 
-export type BuildingId = "homePage" | "forum" | "shop" | "shareware" | "portal" | "rentedServer";
+export type EraOneBuildingId = "homePage" | "forum" | "shop" | "shareware" | "portal" | "rentedServer";
+
+export type EraTwoBuildingId = "dataCollector" | "buyScript" | "database" | "cloudCluster" | "datacenter" | "robotArm";
+
+export type BuildingId = EraOneBuildingId | EraTwoBuildingId;
 
 export interface BuildingDef {
   id: BuildingId;
@@ -13,9 +17,11 @@ export interface BuildingDef {
   description: string;
   baseCost: Decimal;
   costResource: ResourceId;
-  /** Production per second, per building owned. */
+  /** Production per second, per building owned. A script produces nothing (perSecond 0). */
   produces: { resource: ResourceId; perSecond: Decimal };
   growth: number;
+  /** The era that introduces the building. */
+  era: 1 | 2;
 }
 
 export type UpgradeTarget =
@@ -97,6 +103,10 @@ export interface GameState {
   archives: Record<string, true>;
   /** Unlocked achievements. */
   achievements: Record<string, true>;
+  /** Current era: 1 until the first renaissance, then 2. */
+  era: 1 | 2;
+  /** The building the owned scripts buy, as soon as it is affordable (era II). */
+  scriptTarget: BuildingId | null;
   /** Renaissances completed, lifetime. */
   renaissances: number;
   /** Knowledge points available to spend on the Knowledge tree. */

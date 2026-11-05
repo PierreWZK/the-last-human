@@ -51,7 +51,7 @@ describe("choix d'événement", () => {
     const s: GameState = {
       ...afterY2K(),
       event: { status: "open", id: "server-down" },
-      resources: { money: D(100), data: D(0) },
+      resources: { money: D(100), data: D(0), compute: D(0) },
     };
     expect(resolveEvent(s, "repair")).toBe(s);
   });
@@ -60,7 +60,7 @@ describe("choix d'événement", () => {
     const s: GameState = {
       ...afterY2K(),
       event: { status: "open", id: "tax-letter" },
-      resources: { money: D(5000), data: D(0) },
+      resources: { money: D(5000), data: D(0), compute: D(0) },
     };
     const after = resolveEvent(s, "pay");
     expect(after.resources.money.toNumber()).toBe(4000);

@@ -1,5 +1,6 @@
 import type Decimal from "break_infinity.js";
 import { BUILDINGS, MILESTONES, UPGRADES } from "@/content/era1";
+import { BUILDINGS_ERA2 } from "@/content/era2";
 import {
   ACHIEVEMENTS,
   ARCHIVES,
@@ -32,7 +33,10 @@ export const MANUAL_BASE = D(1);
 
 export type BuyMode = 1 | 10 | 100 | "max";
 
-const BUILDING_BY_ID = new Map(BUILDINGS.map((b) => [b.id, b]));
+/** Every building of every era. Eras only decide which ones the player can see. */
+export const ALL_BUILDINGS = [...BUILDINGS, ...BUILDINGS_ERA2];
+
+const BUILDING_BY_ID = new Map(ALL_BUILDINGS.map((b) => [b.id, b]));
 const UPGRADE_BY_ID = new Map(UPGRADES.map((u) => [u.id, u]));
 const EVENT_BY_ID = new Map([...EVENTS, ...RANDOM_EVENTS].map((e) => [e.id, e]));
 
@@ -41,10 +45,10 @@ export function createInitialState(seed = 1): GameState {
   return {
     schemaVersion: SCHEMA_VERSION,
     elapsedMs: 0,
-    resources: { money: ZERO, data: ZERO },
+    resources: { money: ZERO, data: ZERO, compute: ZERO },
     totalMoney: ZERO,
     totalClicks: 0,
-    buildings: Object.fromEntries(BUILDINGS.map((b) => [b.id, 0])) as Record<BuildingId, number>,
+    buildings: Object.fromEntries(ALL_BUILDINGS.map((b) => [b.id, 0])) as Record<BuildingId, number>,
     upgrades: {},
     event: { status: "pending" },
     eventsResolved: 0,
@@ -53,6 +57,8 @@ export function createInitialState(seed = 1): GameState {
     nextEventAtMs: EVENT_GAP_MS.min,
     archives: {},
     achievements: {},
+    era: 1,
+    scriptTarget: null,
     renaissances: 0,
     knowledgePoints: 0,
     knowledgeBonuses: {},
@@ -138,9 +144,9 @@ export function requirementMet(state: GameState, req: UpgradeRequirement): boole
 
 /** Passive production per second, per resource (buildings only). */
 export function productionPerSecond(state: GameState): Record<ResourceId, Decimal> {
-  const rates: Record<ResourceId, Decimal> = { money: ZERO, data: ZERO };
+  const rates: Record<ResourceId, Decimal> = { money: ZERO, data: ZERO, compute: ZERO };
   const factor = timedFactor(state) * achievementBonus(state) * knowledgeMultiplier(state, "all");
-  for (const def of BUILDINGS) {
+  for (const def of ALL_BUILDINGS) {
     const owned = state.buildings[def.id];
     if (owned === 0) continue;
     const m = multiplier(state, def.id) * synergyBonus(state, def.id) * milestoneMultiplier(owned) * factor;
@@ -156,7 +162,7 @@ export function productionPerSecond(state: GameState): Record<ResourceId, Decima
 export function humanDependency(state: GameState): number {
   let total = 0;
   let human = 0;
-  for (const def of BUILDINGS) {
+  for (const def of ALL_BUILDINGS) {
     const weight = state.buildings[def.id] * def.produces.perSecond.toNumber();
     total += weight;
     human += weight * HUMAN_SHARE[def.id];
@@ -185,7 +191,14 @@ export function knowledgeGain(state: GameState): number {
 
 /** The first renaissance needs every upgrade of era I. */
 export function canRenaissance(state: GameState): boolean {
-  return state.event.status !== "open" && UPGRADES.every((u) => state.upgrades[u.id]);
+  return state.era === 1 && state.event.status !== "open" && UPGRADES.every((u) => state.upgrades[u.id]);
+}
+
+/** Script d'achat (ère II): choose the building the owned scripts buy. Null clears it. */
+export function setScriptTarget(state: GameState, id: BuildingId | null): GameState {
+  if (id === "buyScript") return state;
+  if (id !== null && !BUILDING_BY_ID.has(id)) return state;
+  return { ...state, scriptTarget: id };
 }
 
 /**
@@ -196,11 +209,13 @@ export function renaissance(state: GameState): GameState {
   if (!canRenaissance(state)) return state;
   return refreshUnlocks({
     ...state,
-    resources: { money: ZERO, data: ZERO },
+    resources: { money: ZERO, data: ZERO, compute: ZERO },
     totalMoney: ZERO,
-    buildings: Object.fromEntries(BUILDINGS.map((b) => [b.id, 0])) as Record<BuildingId, number>,
+    buildings: Object.fromEntries(ALL_BUILDINGS.map((b) => [b.id, 0])) as Record<BuildingId, number>,
     upgrades: {},
     effects: [],
+    era: 2,
+    scriptTarget: null,
     renaissances: state.renaissances + 1,
     knowledgePoints: state.knowledgePoints + knowledgeGain(state),
     nextEventAtMs: state.elapsedMs + EVENT_GAP_MS.min,
@@ -300,6 +315,7 @@ export function tick(state: GameState, dtMs: number): GameState {
   const rates = productionPerSecond(state);
   const gainMoney = rates.money.mul(seconds);
   const gainData = rates.data.mul(seconds);
+  const gainCompute = rates.compute.mul(seconds);
   const elapsedMs = state.elapsedMs + dtMs;
   let next: GameState = {
     ...state,
@@ -307,10 +323,15 @@ export function tick(state: GameState, dtMs: number): GameState {
     resources: {
       money: state.resources.money.add(gainMoney),
       data: state.resources.data.add(gainData),
+      compute: state.resources.compute.add(gainCompute),
     },
     totalMoney: state.totalMoney.add(gainMoney),
     effects: state.effects.filter((e) => e.untilMs > elapsedMs),
   };
+
+  // Scripts buy the chosen building as soon as it is affordable (era II).
+  const scripts = next.buildings.buyScript;
+  if (scripts > 0 && next.scriptTarget) next = buyBuilding(next, next.scriptTarget, "max");
 
   // The scripted event comes first; random events only after it has been answered.
   if (next.event.status === "pending" && next.totalMoney.gte(Y2K_TRIGGER_MONEY)) {

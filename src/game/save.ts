@@ -1,4 +1,5 @@
 import { BUILDINGS, UPGRADES } from "@/content/era1";
+import { BUILDINGS_ERA2 } from "@/content/era2";
 import { ACHIEVEMENTS, ARCHIVES, EVENTS, EVENT_GAP_MS, RANDOM_EVENTS } from "@/content/events1";
 import { KNOWLEDGE_BONUSES } from "@/content/knowledge";
 import { D } from "./decimal";
@@ -17,7 +18,9 @@ export const BACKUP_KEY = "the-last-human:save-backup";
 interface SerializedState {
   schemaVersion: number;
   elapsedMs: number;
-  resources: { money: string; data: string };
+  resources: { money: string; data: string; compute: string };
+  era: number;
+  scriptTarget: string | null;
   totalMoney: string;
   totalClicks: number;
   buildings: Record<string, number>;
@@ -53,7 +56,13 @@ export function serialize(state: GameState, now: Date = new Date()): string {
     state: {
       schemaVersion: state.schemaVersion,
       elapsedMs: state.elapsedMs,
-      resources: { money: state.resources.money.toString(), data: state.resources.data.toString() },
+      resources: {
+        money: state.resources.money.toString(),
+        data: state.resources.data.toString(),
+        compute: state.resources.compute.toString(),
+      },
+      era: state.era,
+      scriptTarget: state.scriptTarget,
       totalMoney: state.totalMoney.toString(),
       totalClicks: state.totalClicks,
       buildings: { ...state.buildings },
@@ -119,6 +128,17 @@ const MIGRATIONS: Array<(raw: Record<string, unknown>) => Record<string, unknown
   },
   // v2 -> v3: renaissance I adds the Knowledge counters, all empty at first.
   (raw) => ({ ...raw, renaissances: 0, knowledgePoints: 0, knowledgeBonuses: {} }),
+  // v3 -> v4: era II adds Calcul and the era. A save that already had a renaissance is in era II.
+  (raw) => {
+    const resources = isRecord(raw.resources) ? raw.resources : {};
+    const renaissances = typeof raw.renaissances === "number" ? raw.renaissances : 0;
+    return {
+      ...raw,
+      resources: { ...resources, compute: "0" },
+      era: renaissances > 0 ? 2 : 1,
+      scriptTarget: null,
+    };
+  },
 ];
 
 function migrate(raw: Record<string, unknown>, fromVersion: number): LoadResult {
@@ -135,6 +155,7 @@ const EVENT_IDS = new Set([...EVENTS, ...RANDOM_EVENTS].map((e) => e.id));
 const ARCHIVE_IDS = new Set(ARCHIVES.map((a) => a.id));
 const ACHIEVEMENT_IDS = new Set(ACHIEVEMENTS.map((a) => a.id));
 const KNOWLEDGE_IDS = new Set(KNOWLEDGE_BONUSES.map((b) => b.id));
+const BUILDING_IDS = new Set<string>([...BUILDINGS, ...BUILDINGS_ERA2].map((b) => b.id));
 
 function validate(raw: Record<string, unknown>): LoadResult {
   const { elapsedMs, resources, totalMoney, buildings, upgrades, event, effects } = raw;
@@ -143,7 +164,12 @@ function validate(raw: Record<string, unknown>): LoadResult {
   if (!isRecord(resources)) return bad("Ressources invalides");
   const money = parseDecimal(resources.money);
   const data = parseDecimal(resources.data);
-  if (!money || !data) return bad("Quantité de ressource invalide");
+  const compute = parseDecimal(resources.compute);
+  if (!money || !data || !compute) return bad("Quantité de ressource invalide");
+  if (raw.era !== 1 && raw.era !== 2) return bad("Ère invalide");
+  if (raw.scriptTarget !== null && !BUILDING_IDS.has(raw.scriptTarget as string)) {
+    return bad("Cible de script inconnue");
+  }
   const totalMoneyValue = parseDecimal(totalMoney);
   if (!totalMoneyValue) return bad("Total d'argent invalide");
   if (!isNonNegativeFinite(raw.totalClicks) || !Number.isSafeInteger(raw.totalClicks)) return bad("Clics invalides");
@@ -154,9 +180,9 @@ function validate(raw: Record<string, unknown>): LoadResult {
   if (!isNonNegativeFinite(raw.nextEventAtMs)) return bad("Date du prochain événement invalide");
 
   if (!isRecord(buildings)) return bad("Bâtiments invalides");
-  const buildingIds = new Set<string>(BUILDINGS.map((b) => b.id));
+  const buildingIds = BUILDING_IDS;
   const parsedBuildings = {} as Record<BuildingId, number>;
-  for (const def of BUILDINGS) {
+  for (const def of [...BUILDINGS, ...BUILDINGS_ERA2]) {
     const count = buildings[def.id];
     if (count === undefined) {
       parsedBuildings[def.id] = 0;
@@ -214,7 +240,9 @@ function validate(raw: Record<string, unknown>): LoadResult {
   const state: GameState = {
     ...base,
     elapsedMs: elapsedMs as number,
-    resources: { money, data },
+    resources: { money, data, compute },
+    era: raw.era as 1 | 2,
+    scriptTarget: raw.scriptTarget as BuildingId | null,
     totalMoney: totalMoneyValue,
     totalClicks: raw.totalClicks as number,
     buildings: parsedBuildings,

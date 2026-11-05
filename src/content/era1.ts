@@ -20,7 +20,7 @@ export const TUNING = {
   requirementScale: 17,
 };
 
-const RAW_BUILDINGS: BuildingDef[] = [
+const RAW_BUILDINGS: Omit<BuildingDef, "era">[] = [
   {
     id: "homePage",
     name: "Page personnelle",
@@ -81,6 +81,7 @@ export const BUILDINGS: BuildingDef[] = RAW_BUILDINGS.map((b) => ({
   ...b,
   baseCost: b.baseCost.mul(TUNING.buildingCostScale),
   growth: TUNING.buildingGrowth,
+  era: 1 as const,
 }));
 
 const none = { kind: "none" as const };
