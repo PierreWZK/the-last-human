@@ -1,21 +1,27 @@
 "use client";
 
 import { ACHIEVEMENTS, ACHIEVEMENT_CATEGORIES, ARCHIVES, ARCHIVE_CATEGORIES } from "@/content/milestones";
-import { achievementBonus } from "@/game/engine";
+import { memo } from "react";
 import type { GameState } from "@/game/types";
 import { fr, t } from "@/i18n/fr";
 import styles from "./GameScreen.module.css";
 import { Section } from "./Section";
 
+/**
+ * Both pages list more than a hundred entries and the game re-renders ten times a second: they only
+ * take the unlocked records, whose identity changes only when something is unlocked (memo).
+ */
 const percent = (x: number) => `${(Math.round(x * 1000) / 10).toLocaleString("fr-FR")} %`;
 
 /** Achievements page: by category, each one with what to do to get it and what it gives. */
-export function AchievementsPanel({ state }: { state: GameState }) {
-  const unlocked = ACHIEVEMENTS.filter((a) => state.achievements[a.id]).length;
+export const AchievementsPanel = memo(function AchievementsPanel({ achievements }: { achievements: GameState["achievements"] }) {
+  const state = { achievements };
+  const unlocked = ACHIEVEMENTS.filter((a) => achievements[a.id]).length;
+  const bonus = ACHIEVEMENTS.reduce((sum, a) => (achievements[a.id] ? sum + a.bonus : sum), 0);
   return (
     <>
       <p className={styles.muted}>{t(fr.achievements.count, { count: unlocked, total: ACHIEVEMENTS.length })}</p>
-      <p className={styles.muted}>{t(fr.achievements.bonus, { bonus: percent(achievementBonus(state) - 1) })}</p>
+      <p className={styles.muted}>{t(fr.achievements.bonus, { bonus: percent(bonus) })}</p>
       {ACHIEVEMENT_CATEGORIES.map((cat) => {
         const list = ACHIEVEMENTS.filter((a) => a.category === cat);
         const done = list.filter((a) => state.achievements[a.id]).length;
@@ -41,10 +47,11 @@ export function AchievementsPanel({ state }: { state: GameState }) {
       })}
     </>
   );
-}
+});
 
 /** Human Archives page: found fragments are read in full, the others say how to find them. */
-export function ArchivesPanel({ state }: { state: GameState }) {
+export const ArchivesPanel = memo(function ArchivesPanel({ archives }: { archives: GameState["archives"] }) {
+  const state = { archives };
   const found = ARCHIVES.filter((a) => state.archives[a.id]).length;
   return (
     <>
@@ -70,4 +77,4 @@ export function ArchivesPanel({ state }: { state: GameState }) {
       })}
     </>
   );
-}
+});

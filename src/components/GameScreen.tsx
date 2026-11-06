@@ -22,6 +22,7 @@ import {
   coreFactor,
   neuralCoreGain,
   replicationRate,
+  snippetReward,
   knowledgeGain,
   getEvent,
   humanDependency,
@@ -91,6 +92,20 @@ export function GameScreen() {
   useEffect(() => {
     store.start();
     return () => store.stop();
+  }, [store]);
+
+  // Typing on the keyboard writes code (desktop). Forms, shortcuts and focused buttons keep their keys.
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1) return;
+      const el = e.target instanceof HTMLElement ? e.target : null;
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      if (e.key === " " && el?.tagName === "BUTTON") return;
+      e.preventDefault(); // no page scroll on Space, no quick find on « / » or « ' »
+      store.type(e.key, e.isTrusted, e.repeat);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, [store]);
 
   // Era theme on <html> (cahier §14): the whole page, background included, changes era.
@@ -216,6 +231,7 @@ export function GameScreen() {
               </button>
               <p className={styles.muted}>{t(fr.manual.gain, { amount: formatNumber(manualGain(state)) })}</p>
               <p className={styles.muted}>{fr.manual.hint}</p>
+              <TypingLine store={store} />
             </>
           )}
 
@@ -302,12 +318,12 @@ export function GameScreen() {
 
         <section className={`${styles.window} ${tab === "archives" ? styles.active : ""}`} aria-labelledby="w-arch">
           <h2 id="w-arch" className={styles.windowTitle}>{fr.archives.title}</h2>
-          <ArchivesPanel state={state} />
+          <ArchivesPanel archives={state.archives} />
         </section>
 
         <section className={`${styles.window} ${tab === "achievements" ? styles.active : ""}`} aria-labelledby="w-ach">
           <h2 id="w-ach" className={styles.windowTitle}>{fr.achievements.title}</h2>
-          <AchievementsPanel state={state} />
+          <AchievementsPanel achievements={state.achievements} />
         </section>
 
         <section className={`${styles.window} ${tab === "account" ? styles.active : ""}`} aria-labelledby="w-account">
@@ -893,6 +909,35 @@ function EventWindow({ state, onAnswer }: { state: GameState; onAnswer: (choiceI
         ))}
       </div>
       {slowed && <p className={styles.muted}>{fr.event.slowdown}</p>}
+    </div>
+  );
+}
+
+const NO_TYPING_SERVER = { line: null, reward: null };
+
+/** The keyboard bonus line: typed characters lit, the next one highlighted (red after a mistake). */
+function TypingLine({ store }: { store: ReturnType<typeof getStore> }) {
+  const { line, reward } = useSyncExternalStore(store.subscribe, store.getTyping, () => NO_TYPING_SERVER);
+  return (
+    <div className={styles.typing}>
+      <h3 className={styles.itemName}>{fr.typing.title}</h3>
+      <p className={styles.muted}>{fr.typing.hint}</p>
+      {line ? (
+        <>
+          <p className={styles.codeLine} aria-label={line.text}>
+            <span className={styles.typed}>{line.text.slice(0, line.typed)}</span>
+            <span className={line.error ? styles.cursorError : styles.cursor}>{line.text[line.typed]}</span>
+            <span>{line.text.slice(line.typed + 1)}</span>
+          </p>
+          <p className={styles.muted}>
+            {line.error ? fr.typing.error : t(fr.typing.bonus, { amount: formatNumber(snippetReward(store.getSnapshot().state)) })}
+          </p>
+        </>
+      ) : (
+        <p className={styles.muted} aria-live="polite">
+          {reward ? t(fr.typing.done, { amount: formatNumber(reward) }) : fr.typing.wait}
+        </p>
+      )}
     </div>
   );
 }

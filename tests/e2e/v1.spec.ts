@@ -10,18 +10,18 @@ async function openFresh(page: Page) {
 }
 
 /**
- * Clicks « Taper du code » with real (trusted) clicks until the first building is affordable.
+ * Types on the keyboard (real, trusted key presses, under the 20 per second limit) until the first
+ * building is affordable: each key works like a click on « Taper du code ».
  * Reads the buy button on the DOM: on phones the buy panel is hidden, and role queries skip it.
  */
 async function earnUntilAffordable(page: Page) {
-  const click = page.getByRole("button", { name: "Taper du code" });
-  for (let i = 0; i < 200; i++) {
+  for (let batch = 0; batch < 20; batch++) {
     const affordable = await page.evaluate(() => {
       const buy = [...document.querySelectorAll("button")].find((b) => (b.getAttribute("aria-label") ?? "").startsWith("Page personnelle, ×1"));
       return Boolean(buy && !buy.disabled);
     });
     if (affordable) return;
-    await click.click();
+    await page.keyboard.type("x".repeat(10), { delay: 60 });
   }
   throw new Error("La première page personnelle n'est jamais devenue achetable");
 }
@@ -125,4 +125,12 @@ test("l'achat maximum ne rend jamais l'argent négatif", async ({ page }) => {
   if (await max.isEnabled()) await max.click();
   const money = await page.locator("dl dd").first().innerText();
   expect(money.trim().startsWith("-")).toBe(false);
+});
+
+test("taper au clavier écrit du code et rapporte comme un clic (ordinateur)", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "pas de clavier physique sur écran tactile");
+  await openFresh(page);
+  await expect(page.getByText("Une ligne bonus apparaît toutes les minutes.")).toBeVisible();
+  await page.keyboard.type("abc", { delay: 80 });
+  await expect(page.getByText("Gains au total : 3,0")).toBeVisible();
 });

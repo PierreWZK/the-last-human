@@ -1,9 +1,13 @@
 import { BACKUP_KEY, SAVE_KEY, deserialize, serialize } from "./save";
+import { SNIPPETS, SNIPPET_COOLDOWN_MS } from "@/content/snippets";
+import type { Num } from "./decimal";
 import {
   buyKnowledgeBonus,
   buyBuilding,
   buyUpgrade,
   clickManual,
+  completeSnippet,
+  snippetReward,
   MAX_CLICKS_PER_SECOND,
   createInitialState,
   renaissance,
@@ -49,6 +53,16 @@ export interface StoreSnapshot {
   offline: OfflineReport | null;
 }
 
+/** The bonus line of keyboard typing (desktop), outside the save: it lives with the page. */
+export interface TypingSnapshot {
+  /** The line to copy and how far the player got; null while waiting for the next one. */
+  line: { text: string; typed: number; error: boolean } | null;
+  /** What the last finished line paid, shown until the next one appears. */
+  reward: Num | null;
+}
+
+const NO_TYPING: TypingSnapshot = { line: null, reward: null };
+
 type Listener = () => void;
 
 export class GameStore {
@@ -59,14 +73,20 @@ export class GameStore {
   private lastNow = 0;
   /** Times (performance.now) of the manual clicks of the last second. */
   private recentClicks: number[] = [];
+  private typing: TypingSnapshot = NO_TYPING;
+  /** Game time (elapsedMs) at which the next bonus line appears. */
+  private nextLineAtMs = 0;
   private storage: Storage | null;
 
   constructor(storage: Storage | null = typeof window !== "undefined" ? window.localStorage : null) {
     this.storage = storage;
     this.snapshot = this.load();
+    this.nextLineAtMs = this.snapshot.state.elapsedMs + SNIPPET_COOLDOWN_MS;
   }
 
   getSnapshot = (): StoreSnapshot => this.snapshot;
+
+  getTyping = (): TypingSnapshot => this.typing;
 
   subscribe = (listener: Listener): (() => void) => {
     this.listeners.add(listener);
@@ -103,18 +123,62 @@ export class GameStore {
    * (`element.click()`, `dispatchEvent` from the console) is false and earns nothing.
    */
   click = (trusted: boolean): void => {
-    if (!trusted || this.snapshot.readOnly || this.snapshot.state.endedAtMs !== null) return;
+    if (this.acceptClick(trusted)) this.emit();
+  };
+
+  /**
+   * A key typed on the keyboard (desktop): it works like a click, and moves the bonus line on when
+   * it is the next expected character. Same anti-triche as clicks, plus held keys (`repeat`) ignored.
+   */
+  type = (key: string, trusted: boolean, repeat: boolean): void => {
+    if (repeat || key.length !== 1 || this.snapshot.state.era === 5) return;
+    if (!this.acceptClick(trusted)) return;
+    const line = this.typing.line;
+    if (line) {
+      if (key !== line.text[line.typed]) {
+        this.typing = { ...this.typing, line: { ...line, error: true } };
+      } else if (line.typed + 1 < line.text.length) {
+        this.typing = { ...this.typing, line: { ...line, typed: line.typed + 1, error: false } };
+      } else {
+        const reward = snippetReward(this.snapshot.state);
+        this.snapshot = { ...this.snapshot, state: completeSnippet(this.snapshot.state) };
+        this.typing = { line: null, reward };
+        this.nextLineAtMs = this.snapshot.state.elapsedMs + SNIPPET_COOLDOWN_MS;
+      }
+    }
+    this.emit();
+  };
+
+  /** Shared by click and type: refuses script clicks, frozen games and more than 20 per second. */
+  private acceptClick(trusted: boolean): boolean {
+    if (!trusted || this.snapshot.readOnly || this.snapshot.state.endedAtMs !== null) return false;
     const now = performance.now();
     this.recentClicks = this.recentClicks.filter((t) => now - t < 1000);
-    if (this.recentClicks.length >= MAX_CLICKS_PER_SECOND) return;
+    if (this.recentClicks.length >= MAX_CLICKS_PER_SECOND) return false;
     this.recentClicks.push(now);
     this.snapshot = {
       ...this.snapshot,
       state: clickManual(this.snapshot.state),
       clicks: this.snapshot.clicks + 1,
     };
-    this.listeners.forEach((listener) => listener());
-  };
+    return true;
+  }
+
+  /** Shows the next bonus line once its time has come (eras I to IV only). */
+  private scheduleLine(): void {
+    const { elapsedMs, era } = this.snapshot.state;
+    // A new humanity or a save from the cloud can move game time back: restart the wait from there.
+    if (this.nextLineAtMs - elapsedMs > SNIPPET_COOLDOWN_MS) this.nextLineAtMs = elapsedMs + SNIPPET_COOLDOWN_MS;
+    if (era === 5) {
+      if (this.typing.line) this.typing = NO_TYPING;
+      return;
+    }
+    if (this.typing.line || elapsedMs < this.nextLineAtMs) return;
+    const lines = SNIPPETS[era];
+    const text = lines[Math.floor(Math.random() * lines.length)];
+    this.typing = { line: { text, typed: 0, error: false }, reward: null };
+    this.emit();
+  }
 
   buy = (id: BuildingId, mode: BuyMode): void => this.update((s) => buyBuilding(s, id, mode));
 
@@ -226,6 +290,7 @@ export class GameStore {
     // A throttled background tab comes back: replay the gap instead of losing it.
     if (elapsed > MAX_STEP_MS) this.catchUp(elapsed);
     else this.update((s) => tick(s, elapsed));
+    this.scheduleLine();
   }
 
   private onVisibility = (): void => {
