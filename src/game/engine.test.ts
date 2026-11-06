@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { D } from "./decimal";
 
 import {
+  achievementBonus,
   buildingCost,
   getBuilding,
   buyBuilding,
@@ -154,9 +155,10 @@ describe("événement : le bug de l'an 2000", () => {
     const base = createInitialState();
     const open = { ...base, buildings: { ...base.buildings, homePage: 9 }, event: { status: "open" as const, id: "y2k" } };
     const ignored = resolveY2K(open, "ignore");
-    expect(productionPerSecond(ignored).money.toNumber()).toBeCloseTo(0.9, 6);
+    // Answering unlocks achievements (+0,1 % each): the slowdown is measured against them.
+    expect(productionPerSecond(ignored).money.toNumber()).toBeCloseTo(0.9 * achievementBonus(ignored), 6);
     const later = tick(ignored, 120_000);
     expect(later.effects).toHaveLength(0);
-    expect(productionPerSecond(later).money.toNumber()).toBeCloseTo(1.8, 6);
+    expect(productionPerSecond(later).money.toNumber()).toBeCloseTo(1.8 * achievementBonus(later), 6);
   });
 });

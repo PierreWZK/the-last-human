@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ARCHIVES } from "@/content/events1";
+import { ARCHIVES } from "@/content/milestones";
 import { getCloud } from "@/game/cloud";
 import { formatDuration, formatNumber } from "@/game/decimal";
 import { getEvent } from "@/game/engine";

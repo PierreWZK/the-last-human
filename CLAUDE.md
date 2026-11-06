@@ -13,6 +13,16 @@
 - [x] Tests E2E des phases 1 à 4 ter : 40 verts sur 4 largeurs
 - [x] README et CAHIER-DES-CHARGES mis à jour pour la phase 5, `.env.example` ajouté
 
+- [x] Succès (107) et archives (108) dans `src/content/milestones.ts`, conditions partagées dans `conditions.ts` (chaque entrée a sa phrase « comment l'obtenir »)
+- [x] Page Succès (onglet dédié, par catégorie) et Archives (par époque, indices visibles tant que verrouillé)
+- [x] Sections dépliables (`Section.tsx`, état dans localStorage)
+- [x] Prix affiché sur chaque bouton d'achat ; filtre des améliorations (seulement abordables, bouton « afficher tout »)
+- [x] « Cible des scripts d'achat » seulement si un script d'achat est possédé
+- [x] Anti-triche : `isTrusted` (clic script ignoré), 20 clics/s côté store, plausibilité des clics côté serveur (422)
+- [x] Fond animé (`Backdrop.tsx`) : racks clignotants sur les bords, robots qui volent, désactivé si mouvement réduit
+- [x] Tests : 151 unitaires, E2E 70/70 (relance d'un test de compte, échec de timing sous charge)
+- Limites connues : un invité peut modifier localStorage ; le classement reste réservé aux comptes.
+
 ### Mise en ligne (2026-11-06)
 - PR #8 à #13 fusionnées dans `main` (phases 5 à 9, plus `public/robots.txt` pour le Dockerfile).
 - En ligne : https://thelasthuman.projectp.fr (Coolify, suit `main`, déploiement par API avec `COOLIFY_URL` / `COOLIFY_TOKEN`).

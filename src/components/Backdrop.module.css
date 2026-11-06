@@ -1,0 +1,142 @@
+/* Behind everything, never in the way: fixed, no pointer events, low opacity. */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0.22;
+}
+
+/* Server racks along the edges: a column of units, each with two lights. */
+.rack {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  padding: 8px 6px;
+  border-inline: 1px solid var(--phosphor-dim);
+}
+
+.left {
+  left: 0;
+}
+
+.right {
+  right: 0;
+}
+
+.unit {
+  height: 10px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 1px solid var(--phosphor-dim);
+}
+
+.led {
+  width: 3px;
+  height: 3px;
+  background: var(--phosphor);
+  animation: blink 2s steps(1, end) infinite;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  40% {
+    opacity: 0.15;
+  }
+  55% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.4;
+  }
+}
+
+/* A small pixel robot: a head with two eyes, an antenna, two side rotors. Drawn with box-shadow. */
+.robot {
+  position: absolute;
+  left: 0;
+  width: 0;
+  height: 0;
+  animation: fly 45s linear infinite;
+}
+
+.body {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  transform: scale(var(--s, 1));
+  /* 4 px cells: antenna, head row, eyes row, bottom row, two rotors. */
+  box-shadow:
+    8px 0 var(--phosphor),
+    0 4px var(--phosphor), 4px 4px var(--phosphor), 8px 4px var(--phosphor), 12px 4px var(--phosphor), 16px 4px var(--phosphor),
+    0 8px var(--phosphor), 8px 8px var(--phosphor), 16px 8px var(--phosphor),
+    0 12px var(--phosphor), 4px 12px var(--phosphor), 8px 12px var(--phosphor), 12px 12px var(--phosphor), 16px 12px var(--phosphor),
+    -8px 4px var(--phosphor-dim), 24px 4px var(--phosphor-dim);
+  animation: hover 1.4s ease-in-out infinite;
+}
+
+@keyframes fly {
+  from {
+    transform: translateX(-60px);
+  }
+  to {
+    transform: translateX(calc(100vw + 60px));
+  }
+}
+
+.reverse {
+  animation-name: flyBack;
+}
+
+@keyframes flyBack {
+  from {
+    transform: translateX(calc(100vw + 60px));
+  }
+  to {
+    transform: translateX(-60px);
+  }
+}
+
+@keyframes hover {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -6px;
+  }
+}
+
+/* Phones: racks are thinner so they never eat the reading width. */
+@media (max-width: 599px) {
+  .rack {
+    width: 14px;
+    padding-inline: 3px;
+  }
+
+  .led + .led {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .led,
+  .robot,
+  .body {
+    animation: none;
+  }
+
+  .robot {
+    display: none;
+  }
+}

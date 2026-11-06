@@ -9,7 +9,7 @@ import { serialize } from "@/game/save";
 import { PrismaClient } from "@/generated/prisma/client";
 import { MIN_RUN_MS } from "@/content/era5";
 import { readLeaderboard, readProfile, setHidden } from "./leaderboard";
-import { SNAPSHOTS_KEPT, claimDevice, plausibleGameTime, readSave, writeSave } from "./saves";
+import { SNAPSHOTS_KEPT, claimDevice, plausibleClicks, plausibleGameTime, readSave, writeSave } from "./saves";
 
 /**
  * Integration tests against a real PostgreSQL (PGlite, in memory), with the real migration.
@@ -140,6 +140,14 @@ describe("plausibilité du temps de jeu", () => {
     expect(plausibleGameTime(0, 180_000, 60_000)).toBe(true);
     expect(plausibleGameTime(0, 10 * 60_000, 60_000)).toBe(false);
     expect(plausibleGameTime(1_000_000, 0, 0)).toBe(true); // nouvelle partie : le temps recule
+  });
+});
+
+describe("plausibilité des clics", () => {
+  it("accepte 20 clics par seconde plus la marge, refuse au-delà", () => {
+    expect(plausibleClicks(1200, 60_000)).toBe(true);
+    expect(plausibleClicks(20 * 180, 60_000)).toBe(true); // marge de 120 s
+    expect(plausibleClicks(10_000, 60_000)).toBe(false);
   });
 });
 

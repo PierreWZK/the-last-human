@@ -10,20 +10,18 @@ async function openFresh(page: Page) {
 }
 
 /**
- * Clicks « Taper du code » in batches until the first building is affordable. Works on the
- * DOM directly: on phones the buy panel is hidden, and role queries skip hidden elements.
+ * Clicks « Taper du code » with real (trusted) clicks until the first building is affordable.
+ * Reads the buy button on the DOM: on phones the buy panel is hidden, and role queries skip it.
  */
 async function earnUntilAffordable(page: Page) {
-  for (let batch = 0; batch < 20; batch++) {
+  const click = page.getByRole("button", { name: "Taper du code" });
+  for (let i = 0; i < 200; i++) {
     const affordable = await page.evaluate(() => {
-      const buttons = [...document.querySelectorAll("button")];
-      const buy = buttons.find((b) => (b.getAttribute("aria-label") ?? "").startsWith("Page personnelle, ×1"));
-      if (buy && !buy.disabled) return true;
-      const click = buttons.find((b) => b.textContent?.trim() === "Taper du code");
-      for (let i = 0; i < 50; i++) click?.click();
-      return false;
+      const buy = [...document.querySelectorAll("button")].find((b) => (b.getAttribute("aria-label") ?? "").startsWith("Page personnelle, ×1"));
+      return Boolean(buy && !buy.disabled);
     });
     if (affordable) return;
+    await click.click();
   }
   throw new Error("La première page personnelle n'est jamais devenue achetable");
 }
@@ -36,6 +34,17 @@ async function openBuyPanel(page: Page) {
   const width = page.viewportSize()?.width ?? 1440;
   if (width < 900) await page.getByRole("button", { name: "Acheter", exact: true }).click();
 }
+
+test("un clic fait par un script (console F12) ne rapporte rien", async ({ page }) => {
+  await openFresh(page);
+  await page.evaluate(() => {
+    const button = [...document.querySelectorAll("button")].find((b) => b.textContent?.trim() === "Taper du code");
+    for (let i = 0; i < 100; i++) button?.click();
+  });
+  // A real click right after still counts, alone: the hundred script clicks earned nothing.
+  await page.getByRole("button", { name: "Taper du code" }).click();
+  await expect(page.getByText("Gains au total : 1,0")).toBeVisible();
+});
 
 test("le clic manuel fait monter l'argent", async ({ page }) => {
   await openFresh(page);

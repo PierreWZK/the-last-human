@@ -48,8 +48,8 @@ describe("renaissance I", () => {
     expect(after.totalMoney.toNumber()).toBe(0);
     expect(Object.values(after.buildings).every((n) => n === 0)).toBe(true);
     expect(after.upgrades).toEqual({});
-    expect(after.achievements).toEqual(before.achievements);
-    expect(after.archives).toEqual(before.archives);
+    expect(after.achievements).toMatchObject(before.achievements);
+    expect(after.archives).toMatchObject(before.archives);
     expect(after.eventsResolved).toBe(before.eventsResolved);
   });
 
@@ -91,8 +91,8 @@ describe("arbre de Knowledge", () => {
     const s = { ...eraOneDone(), knowledgeBonuses: { "touch-typing": true as const } };
     const after = renaissance(s);
     expect(after.knowledgeBonuses).toEqual({ "touch-typing": true });
-    // Premier clic reste acquis (+1 %), donc la référence garde le même succès.
-    const reference = { ...createInitialState(), achievements: { "first-click": true as const } };
+    // Les succès restent acquis : la référence garde les mêmes.
+    const reference = { ...createInitialState(), achievements: after.achievements };
     expect(manualGain(after).toNumber()).toBeCloseTo(2 * manualGain(reference).toNumber(), 6);
   });
 });

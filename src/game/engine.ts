@@ -4,17 +4,15 @@ import { BUILDINGS_ERA2, UPGRADES_ERA2 } from "@/content/era2";
 import { ALGORITHMS, BASE_SLOTS, type AlgorithmEffect } from "@/content/algorithms";
 import { BUILDINGS_ERA3, INTELLIGENCE_BONUS, MODEL_INTELLIGENCE_PER_SECOND, TRAINING, UPGRADES_ERA3 } from "@/content/era3";
 import {
-  ACHIEVEMENTS,
-  ARCHIVES,
   EVENTS,
   EVENT_GAP_MS,
   HUMAN_SHARE,
   RANDOM_EVENTS,
   Y2K_ID,
   Y2K_TRIGGER_MONEY,
-  type AchievementInput,
 } from "@/content/events1";
 import { KNOWLEDGE_BONUSES, KNOWLEDGE_DIVISOR } from "@/content/knowledge";
+import { ACHIEVEMENTS, ARCHIVES } from "@/content/milestones";
 import {
   AUTO_TRAINING_AUTONOMY,
   BUILDINGS_ERA4,
@@ -414,6 +412,9 @@ export function buyUpgrade(state: GameState, id: string): GameState {
   });
 }
 
+/** No human taps faster than this: the store drops extra clicks, the server refuses the save (anti-triche). */
+export const MAX_CLICKS_PER_SECOND = 20;
+
 export function clickManual(state: GameState): GameState {
   const gain = manualGain(state);
   return refreshUnlocks({
@@ -618,32 +619,21 @@ export function unequipAlgorithm(state: GameState, id: string): GameState {
 
 /** Achievements and archives are monotonic: once unlocked, they stay. */
 export function refreshUnlocks(state: GameState): GameState {
+  const view = { state, human: humanDependency(state) };
   const archives = { ...state.archives };
-  const human = humanDependency(state);
   let archivesChanged = false;
   for (const a of ARCHIVES) {
-    if (archives[a.id]) continue;
-    const t = a.trigger;
-    const open =
-      t.kind === "human" ? human < t.below : state.event.status === "resolved" && state.event.id === t.id;
-    if (open) {
+    if (!archives[a.id] && a.check(view)) {
       archives[a.id] = true;
       archivesChanged = true;
     }
   }
-
-  const input: AchievementInput = {
-    totalClicks: state.totalClicks,
-    totalMoney: state.totalMoney.toNumber(),
-    ownedBuildings: Object.values(state.buildings).reduce((a, b) => a + b, 0),
-    maxBuilding: Math.max(0, ...Object.values(state.buildings)),
-    eventsResolved: state.eventsResolved,
-    upgrades: Object.keys(state.upgrades).length,
-  };
+  // Achievements see the archives found in this same pass (« Mémoire vive », « Conservateur »).
+  const after = { state: archivesChanged ? { ...state, archives } : state, human: view.human };
   const achievements = { ...state.achievements };
   let achievementsChanged = false;
   for (const a of ACHIEVEMENTS) {
-    if (!achievements[a.id] && a.check(input)) {
+    if (!achievements[a.id] && a.check(after)) {
       achievements[a.id] = true;
       achievementsChanged = true;
     }

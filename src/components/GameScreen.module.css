@@ -93,6 +93,62 @@
   letter-spacing: 0.04em;
 }
 
+/* Collapsible section: the whole title row is the button (44 px tall for touch). */
+.fold {
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: left;
+  cursor: pointer;
+}
+
+.fold:focus-visible {
+  outline: 2px solid var(--phosphor);
+  outline-offset: 2px;
+}
+
+.foldMeta {
+  margin-left: auto;
+  color: var(--phosphor-dim);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.foldIcon {
+  margin-left: auto;
+  color: var(--phosphor-dim);
+}
+
+.foldMeta + .foldIcon {
+  margin-left: 0;
+}
+
+.foldBody {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.foldBody[hidden] {
+  display: none;
+}
+
+/* A locked achievement or archive: readable, but quieter than an unlocked one. */
+.lockedItem .itemName {
+  color: var(--phosphor-dim);
+}
+
+.price {
+  color: var(--phosphor-dim);
+}
+
 .resources {
   margin: 0;
   display: grid;
@@ -228,11 +284,11 @@
 
   .tabs {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 0.25rem;
   }
 
-  /* Five tabs on a 360 px screen: smaller text, no side padding. */
+  /* Six tabs: smaller text, no side padding (phones put them on two rows, below). */
   .tab {
     padding-inline: 0;
     font-size: var(--text-sm);
@@ -392,10 +448,12 @@
 /* Phones: tab bar at the bottom, within thumb reach; events rise as a sheet above it. */
 @media (max-width: 599px) {
   .screen {
-    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+    padding-bottom: calc(7.5rem + env(safe-area-inset-bottom));
   }
 
+  /* Two rows of three: six labels do not fit on one row of a 360 px screen. */
   .tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     position: fixed;
     inset: auto 0 0 0;
     z-index: 10;
@@ -406,7 +464,7 @@
 
   .eventSheet {
     position: fixed;
-    inset: auto 0 calc(3.25rem + env(safe-area-inset-bottom)) 0;
+    inset: auto 0 calc(6.5rem + env(safe-area-inset-bottom)) 0;
     z-index: 9;
     max-height: 60dvh;
     overflow-y: auto;
