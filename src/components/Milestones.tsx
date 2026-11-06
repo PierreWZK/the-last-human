@@ -6,6 +6,7 @@ import type { GameState } from "@/game/types";
 import { fr, t } from "@/i18n/fr";
 import styles from "./GameScreen.module.css";
 import { Section } from "./Section";
+import { SitePage, useGameState } from "./SitePage";
 
 /**
  * Both pages list more than a hundred entries and the game re-renders ten times a second: they only
@@ -78,3 +79,13 @@ export const ArchivesPanel = memo(function ArchivesPanel({ archives }: { archive
     </>
   );
 });
+
+/** The /succes page: the achievements of the local game, outside the game screen. */
+export function AchievementsPage() {
+  const achievements = useGameState().achievements;
+  return (
+    <SitePage current="/succes" title={fr.achievements.title}>
+      <AchievementsPanel achievements={achievements} />
+    </SitePage>
+  );
+}

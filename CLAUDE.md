@@ -25,6 +25,9 @@
 - [x] PR #17 fusionnée. Clavier (branche `feat/clavier-code`) : chaque touche = un clic (ordinateur), ligne de code bonus par ère toutes les minutes, 60 s de production si recopiée sans faute (`src/content/snippets.ts`, `GameStore.type`, `TypingLine`)
 - [x] Listes Succès et Archives mémoïsées : elles ne se re-rendent plus à chaque tick (les tests desktop expiraient sous charge)
 - Tests clavier : 153 unitaires ; E2E 70/73, les 3 tests de compte desktop échouent en parallèle (déjà vu à la PR #17, verts seuls), non relancés une 2e fois.
+- [x] Pages dédiées (branche `feat/pages-compte-succes`) : `/succes` et `/compte` (compte, sauvegarde, export, classement), liens Jeu / Succès / Compte dans l'en-tête ; le jeu garde 4 onglets (Produire, Acheter, Améliorer, Archives)
+- [x] Fond animé du site dans `layout.tsx` (`Backdrop`, z-index 0 ; `main` en z-index 1) : grille qui défile, balayage, paquets de données, racks, robots. Avant, il était caché sous le fond du `body` (z-index -1).
+- Tests pages : 153 unitaires, E2E 73/73.
 
 ### Mise en ligne (2026-11-06)
 - PR #8 à #13 fusionnées dans `main` (phases 5 à 9, plus `public/robots.txt` pour le Dockerfile).

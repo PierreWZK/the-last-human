@@ -102,3 +102,9 @@ button:focus-visible {
     animation: none !important;
   }
 }
+
+/* Every page sits above the animated site background (Backdrop, z-index 0). */
+main {
+  position: relative;
+  z-index: 1;
+}

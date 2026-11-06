@@ -49,16 +49,15 @@ import { fr, t } from "@/i18n/fr";
 import { ZERO } from "@/game/decimal";
 import styles from "./GameScreen.module.css";
 import { Scene } from "./Scene";
-import { AccountPanel, CloudBanner } from "./AccountPanel";
+import { CloudBanner } from "./AccountPanel";
 import { EndingScreen } from "./EndingScreen";
-import { Leaderboard } from "./Leaderboard";
-import { Backdrop } from "./Backdrop";
-import { AchievementsPanel, ArchivesPanel } from "./Milestones";
+import { ArchivesPanel } from "./Milestones";
+import { SiteNav } from "./SitePage";
 import { Section, toggleFolded, useFolded } from "./Section";
 
-type Tab = "produce" | "buy" | "upgrade" | "archives" | "achievements" | "account";
+type Tab = "produce" | "buy" | "upgrade" | "archives";
 
-const TABS: Tab[] = ["produce", "buy", "upgrade", "archives", "achievements", "account"];
+const TABS: Tab[] = ["produce", "buy", "upgrade", "archives"];
 /** A horizontal swipe longer than this (and mostly horizontal) changes tab on touch screens. */
 const SWIPE_PX = 60;
 
@@ -133,12 +132,12 @@ export function GameScreen() {
 
   return (
     <main className={styles.screen} data-era={state.era}>
-      <Backdrop />
       <header className={styles.header}>
         <h1 className={styles.title}>{fr.title}</h1>
         <p className={styles.era}>
           {fr.eras[state.era].name} <span className={styles.years}>{fr.eras[state.era].years}</span>
         </p>
+        <SiteNav current="/" />
       </header>
 
       {notice && (
@@ -321,16 +320,6 @@ export function GameScreen() {
           <ArchivesPanel archives={state.archives} />
         </section>
 
-        <section className={`${styles.window} ${tab === "achievements" ? styles.active : ""}`} aria-labelledby="w-ach">
-          <h2 id="w-ach" className={styles.windowTitle}>{fr.achievements.title}</h2>
-          <AchievementsPanel achievements={state.achievements} />
-        </section>
-
-        <section className={`${styles.window} ${tab === "account" ? styles.active : ""}`} aria-labelledby="w-account">
-          <h2 id="w-account" className={styles.windowTitle}>{fr.account.title}</h2>
-          <AccountPanel />
-          <Leaderboard />
-        </section>
       </div>
 
       <footer className={styles.footer}>

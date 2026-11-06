@@ -23,9 +23,10 @@ function uniqueName(): string {
   return `p${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`.slice(0, 20);
 }
 
+/** The account lives on its own page (/compte), linked from the game header. */
 async function openAccount(page: Page) {
-  const width = page.viewportSize()?.width ?? 1440;
-  if (width < 900) await page.getByRole("button", { name: "Compte", exact: true }).click();
+  await page.getByRole("link", { name: "Compte", exact: true }).click();
+  await page.waitForURL("**/compte");
 }
 
 async function signUp(page: Page, username: string) {

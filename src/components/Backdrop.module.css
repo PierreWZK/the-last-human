@@ -1,11 +1,80 @@
-/* Behind everything, never in the way: fixed, no pointer events, low opacity. */
+/*
+ * Site background. Sits above the page colour (z-index 0) and below every page (globals.css puts
+ * <main> at z-index 1). Never in the way: fixed, no pointer events.
+ */
 .backdrop {
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   overflow: hidden;
   pointer-events: none;
-  opacity: 0.22;
+}
+
+/* A faint grid drifting down: the floor of a datacenter seen from above. */
+.grid {
+  position: absolute;
+  inset: -40px 0 0 0;
+  opacity: 0.07;
+  background-image:
+    linear-gradient(var(--phosphor) 1px, transparent 1px),
+    linear-gradient(90deg, var(--phosphor) 1px, transparent 1px);
+  background-size: 40px 40px;
+  animation: drift 12s linear infinite;
+}
+
+@keyframes drift {
+  to {
+    transform: translateY(40px);
+  }
+}
+
+/* A slow scan line sweeping the screen, like an old monitor refreshing. */
+.scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 120px;
+  opacity: 0.08;
+  background: linear-gradient(to bottom, transparent, var(--phosphor), transparent);
+  animation: sweep 9s linear infinite;
+}
+
+@keyframes sweep {
+  from {
+    transform: translateY(-120px);
+  }
+  to {
+    transform: translateY(100vh);
+  }
+}
+
+/* Data packets rising from the bottom. */
+.packet {
+  position: absolute;
+  bottom: -10px;
+  width: 3px;
+  height: 8px;
+  background: var(--phosphor);
+  opacity: 0;
+  animation: rise 12s linear infinite;
+}
+
+@keyframes rise {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.45;
+  }
+  90% {
+    opacity: 0.45;
+  }
+  100% {
+    transform: translateY(-105vh);
+    opacity: 0;
+  }
 }
 
 /* Server racks along the edges: a column of units, each with two lights. */
@@ -13,11 +82,12 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 40px;
+  width: 44px;
   display: flex;
   flex-direction: column;
   justify-content: space-around;
   padding: 8px 6px;
+  opacity: 0.45;
   border-inline: 1px solid var(--phosphor-dim);
 }
 
@@ -61,12 +131,13 @@
   }
 }
 
-/* A small pixel robot: a head with two eyes, an antenna, two side rotors. Drawn with box-shadow. */
+/* A small pixel robot: antenna, head, eyes, two side rotors. Drawn with box-shadow. */
 .robot {
   position: absolute;
   left: 0;
   width: 0;
   height: 0;
+  opacity: 0.5;
   animation: fly 45s linear infinite;
 }
 
@@ -75,7 +146,6 @@
   width: 4px;
   height: 4px;
   transform: scale(var(--s, 1));
-  /* 4 px cells: antenna, head row, eyes row, bottom row, two rotors. */
   box-shadow:
     8px 0 var(--phosphor),
     0 4px var(--phosphor), 4px 4px var(--phosphor), 8px 4px var(--phosphor), 12px 4px var(--phosphor), 16px 4px var(--phosphor),
@@ -129,13 +199,16 @@
   }
 }
 
+/* Reduced motion: the grid and the racks stay, still; nothing moves. */
 @media (prefers-reduced-motion: reduce) {
+  .grid,
   .led,
-  .robot,
   .body {
     animation: none;
   }
 
+  .scan,
+  .packet,
   .robot {
     display: none;
   }
