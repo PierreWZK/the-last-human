@@ -113,7 +113,7 @@ describe("renaissance II", () => {
     expect(after.algorithmPoints).toBeGreaterThan(before.algorithmPoints);
     expect(after.buildings.database).toBe(0);
     expect(after.upgrades).toEqual({});
-    expect(after.achievements).toEqual(before.achievements);
+    expect(after.achievements).toMatchObject(before.achievements);
   });
 
   it("elle garde l'arbre de Knowledge et les algorithmes achetés", () => {

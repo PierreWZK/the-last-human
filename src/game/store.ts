@@ -4,6 +4,7 @@ import {
   buyBuilding,
   buyUpgrade,
   clickManual,
+  MAX_CLICKS_PER_SECOND,
   createInitialState,
   renaissance,
   renaissance2,
@@ -56,6 +57,8 @@ export class GameStore {
   private timer: ReturnType<typeof setInterval> | null = null;
   private autosave: ReturnType<typeof setInterval> | null = null;
   private lastNow = 0;
+  /** Times (performance.now) of the manual clicks of the last second. */
+  private recentClicks: number[] = [];
   private storage: Storage | null;
 
   constructor(storage: Storage | null = typeof window !== "undefined" ? window.localStorage : null) {
@@ -95,8 +98,16 @@ export class GameStore {
 
   // Actions -------------------------------------------------------------
 
-  click = (): void => {
-    if (this.snapshot.readOnly || this.snapshot.state.endedAtMs !== null) return;
+  /**
+   * A manual click. `trusted` is the browser's Event.isTrusted: a click made by a script
+   * (`element.click()`, `dispatchEvent` from the console) is false and earns nothing.
+   */
+  click = (trusted: boolean): void => {
+    if (!trusted || this.snapshot.readOnly || this.snapshot.state.endedAtMs !== null) return;
+    const now = performance.now();
+    this.recentClicks = this.recentClicks.filter((t) => now - t < 1000);
+    if (this.recentClicks.length >= MAX_CLICKS_PER_SECOND) return;
+    this.recentClicks.push(now);
     this.snapshot = {
       ...this.snapshot,
       state: clickManual(this.snapshot.state),

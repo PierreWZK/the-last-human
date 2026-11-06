@@ -98,7 +98,7 @@ describe("synchronisation cloud", () => {
     await cloud.connect("alice");
     expect(cloud.getStatus()).toEqual({ kind: "elsewhere" });
     expect(store.getSnapshot().readOnly).toBe(true);
-    store.click();
+    store.click(true);
     expect(store.getSnapshot().state.totalClicks).toBe(0);
     await cloud.resumeHere();
     expect(fake.activeDevice).toBe("device-this-0001");

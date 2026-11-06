@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent, type PointerEvent } from "react";
-import { ACHIEVEMENTS, ARCHIVES } from "@/content/events1";
 import { KNOWLEDGE_BONUSES } from "@/content/knowledge";
 import { ALGORITHMS } from "@/content/algorithms";
 import { TRAINING } from "@/content/era3";
@@ -52,10 +51,13 @@ import { Scene } from "./Scene";
 import { AccountPanel, CloudBanner } from "./AccountPanel";
 import { EndingScreen } from "./EndingScreen";
 import { Leaderboard } from "./Leaderboard";
+import { Backdrop } from "./Backdrop";
+import { AchievementsPanel, ArchivesPanel } from "./Milestones";
+import { Section, toggleFolded, useFolded } from "./Section";
 
-type Tab = "produce" | "buy" | "upgrade" | "archives" | "account";
+type Tab = "produce" | "buy" | "upgrade" | "archives" | "achievements" | "account";
 
-const TABS: Tab[] = ["produce", "buy", "upgrade", "archives", "account"];
+const TABS: Tab[] = ["produce", "buy", "upgrade", "archives", "achievements", "account"];
 /** A horizontal swipe longer than this (and mostly horizontal) changes tab on touch screens. */
 const SWIPE_PX = 60;
 
@@ -116,6 +118,7 @@ export function GameScreen() {
 
   return (
     <main className={styles.screen} data-era={state.era}>
+      <Backdrop />
       <header className={styles.header}>
         <h1 className={styles.title}>{fr.title}</h1>
         <p className={styles.era}>
@@ -208,7 +211,7 @@ export function GameScreen() {
           ) : (
             <>
               <h2 className={styles.windowTitle}>{fr.windows.manual}</h2>
-              <button type="button" className={styles.manual} onClick={store.click}>
+              <button type="button" className={styles.manual} onClick={(e) => store.click(e.nativeEvent.isTrusted)}>
                 {fr.manual.button}
               </button>
               <p className={styles.muted}>{t(fr.manual.gain, { amount: formatNumber(manualGain(state)) })}</p>
@@ -222,7 +225,7 @@ export function GameScreen() {
         <section className={`${styles.window} ${styles.buyWindow} ${tab === "buy" ? styles.active : ""}`} aria-labelledby="w-buy">
           <h2 id="w-buy" className={styles.windowTitle}>{fr.windows.buildings}</h2>
           {state.era === 5 && <p className={styles.itemText}>{fr.era5.empty}</p>}
-          {state.era >= 2 && state.era < 5 && (
+          {state.era >= 2 && state.era < 5 && state.buildings.buyScript > 0 && (
             <div className={styles.item}>
               <label className={styles.itemName} htmlFor="script-target">
                 {fr.scripts.label}
@@ -255,7 +258,11 @@ export function GameScreen() {
 
         <section className={`${styles.window} ${tab === "upgrade" ? styles.active : ""}`} aria-labelledby="w-up">
           <h2 id="w-up" className={styles.windowTitle}>{fr.windows.upgrades}</h2>
-          {state.era < 5 && <UpgradeList state={state} onBuy={store.upgrade} />}
+          {state.era < 5 && (
+            <Section id="upgrades" title={fr.upgrades.listTitle}>
+              <UpgradeList state={state} onBuy={store.upgrade} />
+            </Section>
+          )}
           <DirectivesPanel state={state} onGive={store.giveDirective} />
           <RenaissancePanel state={state} onRenaissance={store.renaissance} />
           <KnowledgeTree state={state} onBuy={store.buyKnowledge} />
@@ -296,6 +303,11 @@ export function GameScreen() {
         <section className={`${styles.window} ${tab === "archives" ? styles.active : ""}`} aria-labelledby="w-arch">
           <h2 id="w-arch" className={styles.windowTitle}>{fr.archives.title}</h2>
           <ArchivesPanel state={state} />
+        </section>
+
+        <section className={`${styles.window} ${tab === "achievements" ? styles.active : ""}`} aria-labelledby="w-ach">
+          <h2 id="w-ach" className={styles.windowTitle}>{fr.achievements.title}</h2>
+          <AchievementsPanel state={state} />
         </section>
 
         <section className={`${styles.window} ${tab === "account" ? styles.active : ""}`} aria-labelledby="w-account">
@@ -417,6 +429,7 @@ function BuildingRow({
           ? fr.buildings.lastMilestone
           : t(fr.buildings.nextMilestone, { count: nextMilestone(owned) ?? 0 })}
       </p>
+      <p className={styles.muted}>{t(fr.buildings.price, { resource: fr.resources[def.costResource].toLowerCase() })}</p>
       <div className={styles.buyRow}>
         {modes.map(({ label, mode }) => {
           const q = quote(state, def.id, mode);
@@ -432,6 +445,7 @@ function BuildingRow({
             >
               {label}
               {mode === "max" && q.count > 0 ? ` (${q.count})` : ""}
+              {q.count > 0 && <span className={styles.price}> · {formatNumber(q.cost)}</span>}
             </button>
           );
         })}
@@ -440,15 +454,30 @@ function BuildingRow({
   );
 }
 
+/** By default only what can be bought now is listed; the rest is one button away. */
 function UpgradeList({ state, onBuy }: { state: GameState; onBuy: (id: string) => void }) {
+  const showAll = useFolded("upgrades-show-all");
   const remaining = visibleUpgrades(state).filter((u) => !state.upgrades[u.id]);
   if (remaining.length === 0) return <p className={styles.muted}>{fr.upgrades.empty}</p>;
+  const affordable = remaining.filter((u) => canBuyUpgrade(state, u.id));
+  const hidden = remaining.length - affordable.length;
+  const shown = showAll ? remaining : affordable;
   return (
-    <ul className={styles.list}>
-      {remaining.map((def) => (
-        <UpgradeRow key={def.id} def={def} state={state} onBuy={onBuy} />
-      ))}
-    </ul>
+    <>
+      {shown.length === 0 && <p className={styles.muted}>{fr.upgrades.noneAffordable}</p>}
+      <ul className={styles.list}>
+        {shown.map((def) => (
+          <UpgradeRow key={def.id} def={def} state={state} onBuy={onBuy} />
+        ))}
+      </ul>
+      {(hidden > 0 || showAll) && (
+        <div className={styles.buyRow}>
+          <button type="button" className={styles.button} aria-pressed={showAll} onClick={() => toggleFolded("upgrades-show-all")}>
+            {showAll ? fr.upgrades.hideLocked : t(fr.upgrades.showAll, { count: hidden })}
+          </button>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -514,8 +543,7 @@ function RenaissancePanel({ state, onRenaissance }: { state: GameState; onRenais
 function KnowledgeTree({ state, onBuy }: { state: GameState; onBuy: (id: string) => void }) {
   if (state.renaissances === 0) return null;
   return (
-    <div className={styles.event}>
-      <h2 className={styles.windowTitle}>{fr.knowledge.title}</h2>
+    <Section id="knowledge" title={fr.knowledge.title}>
       <p className={styles.muted}>{t(fr.knowledge.points, { points: state.knowledgePoints })}</p>
       <ul className={styles.list}>
         {KNOWLEDGE_BONUSES.map((b) => {
@@ -541,7 +569,7 @@ function KnowledgeTree({ state, onBuy }: { state: GameState; onBuy: (id: string)
           );
         })}
       </ul>
-    </div>
+    </Section>
   );
 }
 
@@ -598,8 +626,7 @@ function AlgorithmsPanel({ state, store }: { state: GameState; store: ReturnType
   const used = state.equippedAlgorithms.length;
   const slots = algorithmSlots(state);
   return (
-    <div className={styles.event}>
-      <h2 className={styles.windowTitle}>{fr.algorithms.title}</h2>
+    <Section id="algorithms" title={fr.algorithms.title}>
       <p className={styles.muted}>{t(fr.algorithms.points, { points: state.algorithmPoints })}</p>
       <p className={styles.muted}>{t(fr.algorithms.slots, { used, total: slots })}</p>
       <ul className={styles.list}>
@@ -644,7 +671,7 @@ function AlgorithmsPanel({ state, store }: { state: GameState; store: ReturnType
           );
         })}
       </ul>
-    </div>
+    </Section>
   );
 }
 
@@ -652,8 +679,7 @@ function TrainingPanel({ state, onStart }: { state: GameState; onStart: () => vo
   if (state.era < 3 || state.era === 5) return null;
   const affordable = state.resources.data.gte(TRAINING.dataCost) && state.resources.compute.gte(TRAINING.computeCost);
   return (
-    <div className={styles.event}>
-      <h2 className={styles.windowTitle}>{fr.training.title}</h2>
+    <Section id="training" title={fr.training.title}>
       <p className={styles.muted}>{t(fr.training.models, { count: state.models.length })}</p>
       <p className={styles.muted}>
         {t(fr.training.cost, { data: TRAINING.dataCost, compute: formatNumber(D(TRAINING.computeCost)) })}
@@ -671,7 +697,7 @@ function TrainingPanel({ state, onStart }: { state: GameState; onStart: () => vo
       {state.era >= 4 && (
         <p className={styles.muted}>{t(fr.autonomy.autoTraining, { threshold: AUTO_TRAINING_AUTONOMY })}</p>
       )}
-    </div>
+    </Section>
   );
 }
 
@@ -679,8 +705,7 @@ function TrainingPanel({ state, onStart }: { state: GameState; onStart: () => vo
 function PoliciesPanel({ state, onBuy }: { state: GameState; onBuy: (id: string) => void }) {
   if (state.renaissances4 === 0) return null;
   return (
-    <div className={styles.event}>
-      <h2 className={styles.windowTitle}>{fr.policies.title}</h2>
+    <Section id="policies" title={fr.policies.title}>
       <p className={styles.muted}>{t(fr.policies.cores, { count: state.aiCores })}</p>
       <ul className={styles.list}>
         {POLICIES.map((p) => {
@@ -701,7 +726,7 @@ function PoliciesPanel({ state, onBuy }: { state: GameState; onBuy: (id: string)
           );
         })}
       </ul>
-    </div>
+    </Section>
   );
 }
 
@@ -710,8 +735,7 @@ function DirectivesPanel({ state, onGive }: { state: GameState; onGive: (id: str
   if (state.era !== 5) return null;
   const next = nextDirective(state);
   return (
-    <div className={styles.event}>
-      <h2 className={styles.windowTitle}>{fr.era5.directivesTitle}</h2>
+    <Section id="directives" title={fr.era5.directivesTitle}>
       <p className={styles.muted}>{fr.era5.directivesHint}</p>
       <p className={styles.muted}>{t(fr.era5.automation, { percent: Math.round(automation(state) * 100) })}</p>
       <p className={styles.muted}>{t(fr.era5.machines, { count: formatNumber(state.resources.robots) })}</p>
@@ -745,7 +769,7 @@ function DirectivesPanel({ state, onGive }: { state: GameState; onGive: (id: str
         })}
       </ul>
       <p className={styles.muted}>{fr.era5.goal}</p>
-    </div>
+    </Section>
   );
 }
 
@@ -755,8 +779,7 @@ function NeuralGridPanel({ state, store }: { state: GameState; store: ReturnType
   if (state.renaissances3 === 0) return null;
   const nameOf = (id: string) => CORES.find((c) => c.id === id)?.name ?? id;
   return (
-    <div className={styles.event}>
-      <h2 className={styles.windowTitle}>{fr.grid.title}</h2>
+    <Section id="grid" title={fr.grid.title}>
       <p className={styles.muted}>{t(fr.grid.cores, { count: state.neuralCores })}</p>
       <p className={styles.muted}>{fr.grid.hint}</p>
       <div className={styles.buyRow} role="radiogroup" aria-label={fr.grid.title}>
@@ -809,7 +832,7 @@ function NeuralGridPanel({ state, store }: { state: GameState; store: ReturnType
           })}
         </p>
       )}
-    </div>
+    </Section>
   );
 }
 
@@ -871,35 +894,5 @@ function EventWindow({ state, onAnswer }: { state: GameState; onAnswer: (choiceI
       </div>
       {slowed && <p className={styles.muted}>{fr.event.slowdown}</p>}
     </div>
-  );
-}
-
-function ArchivesPanel({ state }: { state: GameState }) {
-  const unlocked = Object.keys(state.achievements).length;
-  return (
-    <>
-      <p className={styles.muted}>{t(fr.archives.count, { count: Object.keys(state.archives).length, total: ARCHIVES.length })}</p>
-      <ul className={styles.list}>
-        {ARCHIVES.map((a) => {
-          const open = Boolean(state.archives[a.id]);
-          return (
-            <li key={a.id} className={styles.item}>
-              <span className={styles.itemName}>{open ? a.title : fr.archives.locked}</span>
-              {open && <p className={styles.itemText}>{a.text}</p>}
-            </li>
-          );
-        })}
-      </ul>
-      <h2 className={styles.windowTitle}>{fr.achievements.title}</h2>
-      <p className={styles.muted}>{t(fr.achievements.count, { count: unlocked, total: ACHIEVEMENTS.length })}</p>
-      <ul className={styles.list}>
-        {ACHIEVEMENTS.map((a) => (
-          <li key={a.id} className={styles.item}>
-            <span className={styles.itemName}>{state.achievements[a.id] ? a.title : fr.achievements.locked}</span>
-          </li>
-        ))}
-      </ul>
-      <p className={styles.muted}>{fr.achievements.bonus}</p>
-    </>
   );
 }

@@ -1,3 +1,4 @@
+import { MAX_CLICKS_PER_SECOND } from "@/game/engine";
 import { OFFLINE_CAP_MS } from "@/game/offline";
 import { deserialize } from "@/game/save";
 import type { PrismaClient } from "@/generated/prisma/client";
@@ -21,6 +22,14 @@ export const CLOCK_MARGIN_RATIO = 0.05;
 export function plausibleGameTime(previousElapsedMs: number, nextElapsedMs: number, serverElapsedMs: number): boolean {
   const allowed = Math.max(0, serverElapsedMs) * (1 + CLOCK_MARGIN_RATIO) + CLOCK_MARGIN_MS;
   return nextElapsedMs - previousElapsedMs <= allowed;
+}
+
+/**
+ * Clics manuels (anti-triche) : le client en refuse plus de 20 par seconde. Le serveur vérifie la
+ * même limite sur toute la partie, puis entre deux sauvegardes à l'horloge du serveur.
+ */
+export function plausibleClicks(totalClicks: number, elapsedMs: number): boolean {
+  return totalClicks <= MAX_CLICKS_PER_SECOND * ((Math.max(0, elapsedMs) + CLOCK_MARGIN_MS) / 1000);
 }
 
 export type SaveResponse = { status: number; body: Record<string, unknown> };
@@ -49,6 +58,10 @@ export async function writeSave(db: PrismaClient, userId: string, input: unknown
   const parsed = deserialize(data);
   if (!parsed.ok) return fail(400, `Sauvegarde refusée : ${parsed.reason}`);
 
+  if (!plausibleClicks(parsed.state.totalClicks, parsed.state.elapsedMs)) {
+    return fail(422, "Clics impossibles : plus de 20 par seconde");
+  }
+
   const base = baseRevision as number;
   return db.$transaction(async (tx) => {
     const current = await tx.save.findUnique({ where: { userId } });
@@ -62,6 +75,10 @@ export async function writeSave(db: PrismaClient, userId: string, input: unknown
       const serverElapsed = Date.now() - current.lastSeenAt.getTime();
       if (previous.ok && !plausibleGameTime(previous.state.elapsedMs, parsed.state.elapsedMs, serverElapsed)) {
         return fail(422, "Gains impossibles : plus de temps de jeu que de temps réel", { revision: currentRevision });
+      }
+      const newClicks = parsed.state.totalClicks - (previous.ok ? previous.state.totalClicks : 0);
+      if (previous.ok && newClicks > 0 && !plausibleClicks(newClicks, serverElapsed)) {
+        return fail(422, "Clics impossibles : plus de 20 par seconde", { revision: currentRevision });
       }
     }
 

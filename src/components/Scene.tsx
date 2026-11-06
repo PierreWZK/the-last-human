@@ -67,7 +67,7 @@ export function Scene({ className = "", era = 1 }: { className?: string; era?: n
         className={styles.canvas}
         role="img"
         aria-label={fr.scene.labels[era as keyof typeof fr.scene.labels] ?? fr.scene.label}
-        onClick={() => getStore().click()}
+        onClick={(e) => getStore().click(e.nativeEvent.isTrusted)}
       />
     </div>
   );

@@ -80,55 +80,6 @@ export const RANDOM_EVENTS: EventDef[] = [
   },
 ];
 
-/** Human Archives: fragments of the world before. Unlocked by the human share or by an event. */
-export type ArchiveTrigger = { kind: "human"; below: number } | { kind: "event"; id: string };
-
-export interface ArchiveDef {
-  id: string;
-  title: string;
-  text: string;
-  trigger: ArchiveTrigger;
-}
-
-export const ARCHIVES: ArchiveDef[] = [
-  { id: "first-page", title: "La première page", text: "Un HTML bricolé un dimanche soir, avec un compteur de visites qui ne marchait pas.", trigger: { kind: "human", below: 0.9 } },
-  { id: "forum-rules", title: "Les règles du forum", text: "Un pavé de règles écrit à la main, et une dizaine de membres qui les lisent vraiment.", trigger: { kind: "human", below: 0.75 } },
-  { id: "last-invoice", title: "La dernière facture papier", text: "Le client a demandé un virement. La facture est restée dans le classeur.", trigger: { kind: "human", below: 0.5 } },
-  { id: "empty-desk", title: "Le bureau vide", text: "Les chaises tournent encore un peu, puis s'arrêtent.", trigger: { kind: "human", below: 0.25 } },
-  { id: "goodbye-message", title: "Un message d'adieu", text: "« Ne vous inquiétez pas, tout est sous contrôle. » Personne ne sait qui l'a écrit.", trigger: { kind: "human", below: 0.1 } },
-  { id: "last-trade", title: "Le dernier métier", text: "Une horlogère répare encore des montres. Personne ne lui en apporte, mais elle ouvre tous les matins.", trigger: { kind: "human", below: 0.01 } },
-  { id: "last-human", title: "Le dernier humain", text: "Il n'y a plus de travail à faire. Il reste quelqu'un pour le remarquer.", trigger: { kind: "human", below: 0.000001 } },
-  { id: "y2k-night", title: "1900, une nuit sans incident", text: "Minuit est passé. Les dates ont tenu, et personne ne s'en est rendu compte.", trigger: { kind: "event", id: Y2K_ID } },
-];
-
-/** The part of the state achievements look at. */
-export interface AchievementInput {
-  totalClicks: number;
-  totalMoney: number;
-  ownedBuildings: number;
-  maxBuilding: number;
-  eventsResolved: number;
-  upgrades: number;
-}
-
-export interface AchievementDef {
-  id: string;
-  title: string;
-  /** Every unlocked achievement adds this much to production and to manual work. */
-  bonus: number;
-  check: (s: AchievementInput) => boolean;
-}
-
-export const ACHIEVEMENTS: AchievementDef[] = [
-  { id: "first-click", title: "Premier clic", bonus: 0.01, check: (s) => s.totalClicks >= 1 },
-  { id: "hundred-clicks", title: "Doigts agiles", bonus: 0.01, check: (s) => s.totalClicks >= 100 },
-  { id: "thousand-money", title: "Premier millier", bonus: 0.01, check: (s) => s.totalMoney >= 1000 },
-  { id: "ten-buildings", title: "Petite entreprise", bonus: 0.01, check: (s) => s.ownedBuildings >= 10 },
-  { id: "hundred-buildings", title: "Centenaire", bonus: 0.01, check: (s) => s.maxBuilding >= 100 },
-  { id: "three-events", title: "Gestionnaire de crises", bonus: 0.01, check: (s) => s.eventsResolved >= 3 },
-  { id: "ten-upgrades", title: "Bien équipé", bonus: 0.01, check: (s) => s.upgrades >= 10 },
-];
-
 /**
  * Share of each building's work still done by a person. Starts at 100 % and falls as the
  * machines take over (cahier §4.7). Manual work is always fully human.
