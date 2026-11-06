@@ -275,6 +275,42 @@
   margin: 0;
 }
 
+/* Keyboard bonus line (desktop only: no physical keyboard on touch screens). */
+.typing {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.codeLine {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--ink);
+  border: 1px solid var(--line);
+  color: var(--phosphor-dim);
+}
+
+.typed {
+  color: var(--phosphor);
+}
+
+.cursor,
+.cursorError {
+  color: var(--ink);
+  background: var(--phosphor);
+}
+
+.cursorError {
+  background: #ff5a3c;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .typing {
+    display: none;
+  }
+}
+
 /* Mobile : un seul panneau à la fois, navigation en haut. */
 @media (max-width: 899px) {
   .screen {

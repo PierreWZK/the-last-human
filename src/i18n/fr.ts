@@ -15,6 +15,14 @@ export const fr = {
     none: "Aucune",
     hint: "Chaque script achète la cible dès qu'elle est abordable.",
   },
+  typing: {
+    title: "Clavier",
+    hint: "Chaque touche tapée écrit du code, comme un clic.",
+    bonus: "Ligne bonus : recopiez-la sans faute pour gagner {amount}.",
+    error: "Faute : tapez le caractère en surbrillance.",
+    done: "Ligne terminée : +{amount}. Prochaine ligne dans une minute.",
+    wait: "Une ligne bonus apparaît toutes les minutes.",
+  },
   notice: "Notice",
   tabs: { produce: "Produire", buy: "Acheter", upgrade: "Améliorer", archives: "Archives", achievements: "Succès", account: "Compte" },
   windows: {

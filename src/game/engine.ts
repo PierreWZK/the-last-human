@@ -12,6 +12,7 @@ import {
   Y2K_TRIGGER_MONEY,
 } from "@/content/events1";
 import { KNOWLEDGE_BONUSES, KNOWLEDGE_DIVISOR } from "@/content/knowledge";
+import { SNIPPET_MIN_CLICKS, SNIPPET_SECONDS } from "@/content/snippets";
 import { ACHIEVEMENTS, ARCHIVES } from "@/content/milestones";
 import {
   AUTO_TRAINING_AUTONOMY,
@@ -422,6 +423,23 @@ export function clickManual(state: GameState): GameState {
     resources: { ...state.resources, money: state.resources.money.add(gain) },
     totalMoney: state.totalMoney.add(gain),
     totalClicks: state.totalClicks + 1,
+  });
+}
+
+/** What a bonus line typed without a mistake pays: a minute of production, never less than 30 clicks. */
+export function snippetReward(state: GameState): Decimal {
+  const fromProduction = productionPerSecond(state).money.mul(SNIPPET_SECONDS);
+  const floor = manualGain(state).mul(SNIPPET_MIN_CLICKS);
+  return fromProduction.gt(floor) ? fromProduction : floor;
+}
+
+export function completeSnippet(state: GameState): GameState {
+  if (state.era === 5 || state.endedAtMs !== null) return state;
+  const gain = snippetReward(state);
+  return refreshUnlocks({
+    ...state,
+    resources: { ...state.resources, money: state.resources.money.add(gain) },
+    totalMoney: state.totalMoney.add(gain),
   });
 }
 
