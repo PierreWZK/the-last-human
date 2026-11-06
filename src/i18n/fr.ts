@@ -15,6 +15,7 @@ export const fr = {
     none: "Aucune",
     hint: "Chaque script achète la cible dès qu'elle est abordable.",
   },
+  site: { nav: "Pages du site", game: "Jeu", achievements: "Succès", account: "Compte" },
   typing: {
     title: "Clavier",
     hint: "Chaque touche tapée écrit du code, comme un clic.",
@@ -24,7 +25,7 @@ export const fr = {
     wait: "Une ligne bonus apparaît toutes les minutes.",
   },
   notice: "Notice",
-  tabs: { produce: "Produire", buy: "Acheter", upgrade: "Améliorer", archives: "Archives", achievements: "Succès", account: "Compte" },
+  tabs: { produce: "Produire", buy: "Acheter", upgrade: "Améliorer", archives: "Archives" },
   windows: {
     resources: "Ressources",
     manual: "Travail manuel",
@@ -243,6 +244,7 @@ export const fr = {
   },
   account: {
     title: "Compte",
+    cloudTitle: "Sauvegarde et connexion",
     loading: "Chargement du compte…",
     signUp: "Créer un compte",
     signIn: "Se connecter",

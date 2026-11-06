@@ -8,6 +8,8 @@ import { fr, t } from "@/i18n/fr";
 import { isPlaceholderEmail, placeholderEmail, validateSignUp } from "@/lib/account";
 import { authClient } from "@/lib/auth-client";
 import styles from "./GameScreen.module.css";
+import { Leaderboard } from "./Leaderboard";
+import { SitePage } from "./SitePage";
 
 const GUEST: CloudStatus = { kind: "guest" };
 
@@ -37,6 +39,24 @@ export function CloudBanner() {
         {fr.account.resumeHere}
       </button>
     </div>
+  );
+}
+
+/** The /compte page: account, cloud save, backup and the ranking, away from the game screen. */
+export function AccountPage() {
+  return (
+    <SitePage current="/compte" title={fr.account.title}>
+      <CloudBanner />
+      <div className={styles.accountGrid}>
+        <div className={styles.accountColumn}>
+          <h2 className={styles.windowTitle}>{fr.account.cloudTitle}</h2>
+          <AccountPanel />
+        </div>
+        <div className={styles.accountColumn}>
+          <Leaderboard />
+        </div>
+      </div>
+    </SitePage>
   );
 }
 
