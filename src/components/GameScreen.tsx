@@ -314,9 +314,15 @@ export function GameScreen() {
 
 /** A scripted era change: the new era's name fades in over the page, then leaves. Not on first load. */
 function EraTransition({ era }: { era: GameState["era"] }) {
-  const previous = useRef(era);
+  // The first render is the server snapshot (era I): start from the loaded game's era instead,
+  // otherwise every page load in era II or later would play the transition.
+  const previous = useRef<GameState["era"] | null>(null);
   const [shown, setShown] = useState<GameState["era"] | null>(null);
   useEffect(() => {
+    if (previous.current === null) {
+      previous.current = getStore().getSnapshot().state.era;
+      return;
+    }
     if (previous.current === era) return;
     previous.current = era;
     setShown(era);

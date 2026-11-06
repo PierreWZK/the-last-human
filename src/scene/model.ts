@@ -29,7 +29,7 @@ export interface SceneModel {
   density: number;
 }
 
-export const RACKS_CAP = 18;
+export const RACKS_CAP = 12; // the two rows of rack slots of the era II room (RACK_SLOTS in eras.ts)
 export const NODES_CAP = 4;
 export { MACHINES_GOAL } from "@/content/era5";
 import { MACHINES_GOAL } from "@/content/era5";
