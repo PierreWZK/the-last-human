@@ -1,6 +1,13 @@
 # THE LAST HUMAN
 
-> Jour 22 du défi **30 jours, 30 projets** · Next.js · TypeScript · PostgreSQL · ✅ **En ligne** : [thelasthuman.projectp.fr](https://thelasthuman.projectp.fr)
+🌐 **[thelasthuman.projectp.fr](https://thelasthuman.projectp.fr/)** · Jour 22 du défi **[30 jours, 30 projets](https://projectp.fr/)** · [Dépôt du défi](https://github.com/PierreWZK/30DaysProjects)
+
+Stack : Next.js, TypeScript, PostgreSQL · ✅ En ligne.
+
+<p align="center">
+  <img src="docs/preview-accueil.png" alt="Page d'accueil de THE LAST HUMAN" width="72%">
+  <img src="docs/preview-mobile.png" alt="THE LAST HUMAN sur téléphone" width="25%">
+</p>
 
 Un jeu incremental narratif, jouable dans le navigateur, sur PC comme sur téléphone.
 
@@ -136,3 +143,14 @@ Trois principes :
 - Avant chaque PR : `npm test`, `npm run test:e2e` et `npm run build` doivent passer.
 - Aucun texte écrit en dur dans les composants : tout passe par `src/i18n/fr.ts`.
 - Toute modification du format de sauvegarde incrémente `schemaVersion` et ajoute une migration testée.
+
+---
+
+## Le défi 30 jours, 30 projets
+
+Un projet complet par jour pendant 30 jours, chacun en ligne sur son propre sous-domaine.
+
+- 🗂️ **Tous les projets** : [projectp.fr](https://projectp.fr/)
+- 💻 **Le dépôt du défi** : [github.com/PierreWZK/30DaysProjects](https://github.com/PierreWZK/30DaysProjects)
+- ⬅️ **Jour précédent** : [Voyant, contrôle technique en 3D](https://voyant.projectp.fr/)
+- ➡️ **Jour suivant** : [Anti-UX, musée à l'envers](https://anti-ux.projectp.fr/)
